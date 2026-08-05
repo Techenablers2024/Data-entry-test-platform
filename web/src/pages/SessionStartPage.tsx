@@ -1,0 +1,183 @@
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { getTodaySummary, startSession } from '../api/sessions'
+import { useSession } from '../context/SessionContext'
+import { formatSeconds } from '../lib/utils'
+import { useDeviceFingerprint } from '../hooks/useDeviceFingerprint'
+
+export function SessionStartPage() {
+  const navigate = useNavigate()
+  const { activeSession, setActiveSession, remainingSeconds } = useSession()
+  const { deviceId, deviceName } = useDeviceFingerprint()
+  const [isStarting, setIsStarting] = useState(false)
+  const [error, setError] = useState('')
+  const [dailyRemaining, setDailyRemaining] = useState<number | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ['today-summary'],
+    queryFn: () => getTodaySummary().then((r) => r.data.data),
+  })
+
+  // Start a live countdown once summary loads
+  useEffect(() => {
+    if (summary?.remaining_daily_seconds === undefined) return
+    setDailyRemaining(summary.remaining_daily_seconds)
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => {
+      setDailyRemaining(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [summary?.remaining_daily_seconds])
+
+  const handleStart = async () => {
+    if (!deviceId) return
+    setError('')
+    setIsStarting(true)
+    try {
+      const res = await startSession(deviceName)
+      setActiveSession(res.data.data)
+      navigate('/data-entry')
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to start session.')
+    } finally {
+      setIsStarting(false)
+    }
+  }
+
+  const canStart = summary
+    ? summary.sessions_used < summary.sessions_allowed &&
+      (dailyRemaining ?? 0) > 0
+    : false
+
+  // ── Active session view ──────────────────────────────────────────────────
+  if (activeSession) {
+    const timerColor = remainingSeconds <= 5 * 60 ? 'text-red-600' :
+                       remainingSeconds <= 30 * 60 ? 'text-amber-600' : 'text-green-600'
+
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
+          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            Session {activeSession.session_number} of 2 — Active
+          </div>
+
+          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Time remaining in session</p>
+          <p className={`text-5xl font-bold font-mono mb-6 ${timerColor}`}>
+            {formatSeconds(remainingSeconds)}
+          </p>
+
+          <div className="bg-gray-50 rounded-xl p-4 mb-6 text-sm space-y-2.5">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Session started</span>
+              <span className="font-medium text-gray-900">
+                {new Date(activeSession.started_at).toLocaleTimeString('en-IN', {
+                  timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Session number</span>
+              <span className="font-medium text-gray-900">{activeSession.session_number} / 2</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Device</span>
+              <span className="font-medium text-gray-900 truncate max-w-[180px]">
+                {activeSession.device_name ?? 'This device'}
+              </span>
+            </div>
+            {dailyRemaining !== null && (
+              <div className="flex justify-between pt-2 border-t border-gray-200">
+                <span className="text-gray-500">Daily time remaining</span>
+                <span className={`font-medium font-mono ${dailyRemaining < 3600 ? 'text-amber-600' : 'text-gray-900'}`}>
+                  {formatSeconds(dailyRemaining)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {remainingSeconds <= 30 * 60 && (
+            <div className={`rounded-xl p-3 mb-4 text-xs font-medium ${
+              remainingSeconds <= 5 * 60
+                ? 'bg-red-50 border border-red-200 text-red-700'
+                : 'bg-amber-50 border border-amber-200 text-amber-700'
+            }`}>
+              ⚠️ Only {formatSeconds(remainingSeconds)} left in this session!
+            </div>
+          )}
+
+          <button onClick={() => navigate('/data-entry')}
+            className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 transition-all text-base">
+            Continue Data Entry →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Start new session view ───────────────────────────────────────────────
+  return (
+    <div className="flex-1 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Ready to start?</h1>
+        <p className="text-gray-500 text-sm mb-6">Review your session availability below before starting.</p>
+
+        {isLoading ? (
+          <div className="h-32 flex items-center justify-center">
+            <div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : summary ? (
+          <div className="bg-gray-50 rounded-xl p-5 mb-6 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Sessions used today</span>
+              <span className="font-semibold text-gray-900">{summary.sessions_used} / {summary.sessions_allowed}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Time used today</span>
+              <span className="font-semibold text-gray-900">{formatSeconds(summary.total_elapsed_seconds)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Time remaining today</span>
+              <span className={`font-semibold font-mono ${(dailyRemaining ?? 0) < 3600 ? 'text-amber-600' : 'text-green-600'}`}>
+                {formatSeconds(dailyRemaining ?? 0)}
+              </span>
+            </div>
+            <div className="pt-2 border-t border-gray-200 flex justify-between text-sm">
+              <span className="text-gray-600">This session (max)</span>
+              <span className="font-semibold text-gray-900">4 hours</span>
+            </div>
+            {(dailyRemaining ?? 0) < 4 * 3600 && (dailyRemaining ?? 0) > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                ⚠️ Only {formatSeconds(dailyRemaining ?? 0)} left today. Session will auto-end at midnight IST.
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-4">
+            {error}
+          </div>
+        )}
+
+        {!canStart && !isLoading && (
+          <div className="bg-gray-100 rounded-xl p-4 text-center text-gray-600 text-sm mb-4">
+            {summary?.sessions_used === summary?.sessions_allowed
+              ? '✅ You have used all your sessions for today. Come back tomorrow!'
+              : '⏰ Daily time limit reached. Come back tomorrow!'}
+          </div>
+        )}
+
+        <button onClick={handleStart}
+          disabled={!canStart || isStarting || !deviceId}
+          className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-base">
+          {isStarting ? 'Starting session…' : 'Start Session'}
+        </button>
+      </div>
+    </div>
+  )
+}

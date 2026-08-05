@@ -1,0 +1,34 @@
+# Backend
+backend/.env
+backend/uploads/
+backend/sample_upload.xlsx
+
+# Web (Electron + React)
+web/node_modules/
+web/dist/
+web/release/
+web/.env
+
+# Mobile (Expo)
+mobile/node_modules/
+mobile/.expo/
+mobile/android/
+mobile/ios/
+mobile/.env
+
+# Go build artifacts
+backend/server
+backend/*.exe
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
