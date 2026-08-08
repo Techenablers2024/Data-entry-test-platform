@@ -8,7 +8,7 @@ on:
       - develop
     paths:
       - 'web/**'
-      - '.github/workflows/build-web-desktop.yml'
+      - '.github/workflows/desktop.yml'
   pull_request:
     branches:
       - master
