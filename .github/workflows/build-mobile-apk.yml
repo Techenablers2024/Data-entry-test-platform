@@ -62,7 +62,11 @@ jobs:
         working-directory: ./mobile
         run: |
           cat app.json
-
+      - name: Initialize EAS Project
+        working-directory: ./mobile
+        run: eas init --account muralidhara --non-interactive
+        env:
+         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       - name: Build Android APK
         working-directory: ./mobile
         run: |
