@@ -23,26 +23,26 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        node-version: [20]
-    
+        node-version: [22]
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: 'web/package-lock.json'
-      
+
       - name: Install dependencies
         working-directory: ./web
         run: npm ci
-      
+
       - name: Build TypeScript
         working-directory: ./web
         run: npm run build
-      
+
       - name: Build Electron app (Windows)
         working-directory: ./web
         run: npm run electron:build -- --win nsis
@@ -58,26 +58,26 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        node-version: [20]
-    
+        node-version: [22]
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: 'web/package-lock.json'
-      
+
       - name: Install dependencies
         working-directory: ./web
         run: npm ci
-      
+
       - name: Build TypeScript
         working-directory: ./web
         run: npm run build
-      
+
       - name: Build Electron app (macOS)
         working-directory: ./web
         run: npm run electron:build -- --mac dmg
@@ -93,26 +93,26 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20]
-    
+        node-version: [22]
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: 'web/package-lock.json'
-      
+
       - name: Install dependencies
         working-directory: ./web
         run: npm ci
-      
+
       - name: Build TypeScript
         working-directory: ./web
         run: npm run build
-      
+
       - name: Build Electron app (Linux)
         working-directory: ./web
         run: npm run electron:build -- --linux AppImage

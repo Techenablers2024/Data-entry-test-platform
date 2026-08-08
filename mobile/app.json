@@ -17,7 +17,15 @@
           "photosPermission": "Allow DataEntry Pro to save screenshots to your gallery."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "android": {
       "adaptiveIcon": {

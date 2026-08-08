@@ -36,7 +36,7 @@ export default function LoginScreen() {
       }
 
       await setAuth(data.token, data.user)
-      router.replace('/(app)/')
+      router.replace('/(app)')
     } catch (err: any) {
       Alert.alert('Login failed', err.response?.data?.error ?? 'Please check your credentials.')
     } finally {
@@ -56,7 +56,7 @@ export default function LoginScreen() {
       // Transfer session to this device (don't end it — just update device_id)
       await takeover(conflict.active_session.session_id)
       await setAuth(conflict.token, conflict.user)
-      router.replace('/(app)/')
+      router.replace('/(app)')
     } catch {
       Alert.alert('Error', 'Failed to take over session.')
     } finally {
@@ -95,7 +95,7 @@ export default function LoginScreen() {
         <Text style={s.label}>Mobile Number</Text>
         <TextInput
           style={s.input} value={mobile}
-          onChangeText={t => { setMobile(t.replace(/\D/g, '').slice(0, 10)); if (error) setError('') }}
+          onChangeText={t => setMobile(t.replace(/\D/g, '').slice(0, 10))}
           placeholder="10-digit mobile number" keyboardType="phone-pad"
         />
 
