@@ -1,0 +1,77 @@
+name: Build Mobile App (APK)
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - develop
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/build-mobile-apk.yml'
+
+  pull_request:
+    branches:
+      - master
+      - main
+      - develop
+    paths:
+      - 'mobile/**'
+
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Verify Versions
+        run: |
+          node -v
+          npm -v
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Install Dependencies
+        working-directory: ./mobile
+        run: npm ci
+
+      - name: Create Environment File
+        working-directory: ./mobile
+        run: |
+          cat > .env << EOF
+          EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8080/api/v1
+          EOF
+
+      - name: Verify Expo Configuration
+        working-directory: ./mobile
+        run: |
+          cat app.json
+
+      - name: Build Android APK
+        working-directory: ./mobile
+        run: |
+          eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Complete
+        run: echo "APK build submitted successfully."
