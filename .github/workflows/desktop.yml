@@ -1,0 +1,148 @@
+name: Build Web Desktop Application
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - develop
+    paths:
+      - 'web/**'
+      - '.github/workflows/build-web-desktop.yml'
+  pull_request:
+    branches:
+      - master
+      - main
+      - develop
+    paths:
+      - 'web/**'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci
+      
+      - name: Build TypeScript
+        working-directory: ./web
+        run: npm run build
+      
+      - name: Build Electron app (Windows)
+        working-directory: ./web
+        run: npm run electron:build -- --win nsis
+      
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataentry-pro-windows
+          path: web/release/*.exe
+          if-no-files-found: warn
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci
+      
+      - name: Build TypeScript
+        working-directory: ./web
+        run: npm run build
+      
+      - name: Build Electron app (macOS)
+        working-directory: ./web
+        run: npm run electron:build -- --mac dmg
+      
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataentry-pro-macos
+          path: web/release/*.dmg
+          if-no-files-found: warn
+
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci
+      
+      - name: Build TypeScript
+        working-directory: ./web
+        run: npm run build
+      
+      - name: Build Electron app (Linux)
+        working-directory: ./web
+        run: npm run electron:build -- --linux AppImage
+      
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataentry-pro-linux
+          path: web/release/*.AppImage
+          if-no-files-found: warn
+
+  create-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release-artifacts
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release-artifacts/**/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
