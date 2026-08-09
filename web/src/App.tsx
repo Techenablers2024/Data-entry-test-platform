@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './context/AuthContext'
 import { SessionProvider } from './context/SessionContext'
@@ -18,12 +18,14 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 })
 
+const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SessionProvider>
-          <BrowserRouter>
+          <Router>
             <Routes>
               {/* Public */}
               <Route path="/login"   element={<LoginPage />} />
@@ -46,7 +48,7 @@ export default function App() {
                 <Route path="reports/:id" element={<UserReportPage />} />
               </Route>
             </Routes>
-          </BrowserRouter>
+          </Router>
         </SessionProvider>
       </AuthProvider>
     </QueryClientProvider>
