@@ -13,6 +13,7 @@ export function AppHeader() {
   const navigate = useNavigate()
 
   const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to logout?')) return
     try { await logout() } catch {}
     clearAuth()
     navigate('/login')

@@ -1,11 +1,14 @@
 import { apiClient } from './client'
-import type { RecordWithConfig, Submission, Batch } from '../types/data'
+import type { RecordWithConfig, Submission, Batch, RecordProgress } from '../types/data'
 
 export const getNextRecord = () =>
   apiClient.get<{ data: RecordWithConfig }>('/records/next')
 
 export const getRecord = (id: string) =>
   apiClient.get<{ data: RecordWithConfig }>(`/records/${id}`)
+
+export const getRecordProgress = () =>
+  apiClient.get<{ data: RecordProgress }>('/records/progress')
 
 export const submitRecord = (recordId: string, sessionId: string, inputValues: Record<string, string>) =>
   apiClient.post<{ data: Submission }>(`/records/${recordId}/submit`, {

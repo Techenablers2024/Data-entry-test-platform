@@ -28,6 +28,27 @@ type RecordWithConfig struct {
 	FieldConfig []*models.FieldConfig `json:"field_config"`
 }
 
+type RecordProgress struct {
+	Total     int64 `json:"total"`
+	Completed int64 `json:"completed"`
+	Pending   int64 `json:"pending"`
+}
+
+// GetProgress returns total active records, how many this user has completed, and how many remain.
+func (s *DataService) GetProgress(userID uuid.UUID) (*RecordProgress, error) {
+	var total int64
+	s.db.Model(&models.DataRecord{}).Where("status = ?", models.RecordStatusActive).Count(&total)
+
+	var completed int64
+	s.db.Model(&models.UserSubmission{}).Where("user_id = ?", userID).Count(&completed)
+
+	return &RecordProgress{
+		Total:     total,
+		Completed: completed,
+		Pending:   total - completed,
+	}, nil
+}
+
 // NextRecord returns the lowest-sequence active record not yet submitted by this user.
 func (s *DataService) NextRecord(userID uuid.UUID) (*RecordWithConfig, error) {
 	var submittedIDs []uuid.UUID
@@ -119,8 +140,15 @@ func (s *DataService) Submit(input SubmitInput) (*models.UserSubmission, error) 
 	for _, fc := range configs {
 		if fc.IsReference {
 			refFields = append(refFields, fc)
-		} else {
+		} else if fc.FieldType != models.FieldTypeFixed {
 			inputFields = append(inputFields, fc)
+		}
+	}
+
+	// Auto-fill fixed fields from record values
+	for _, fc := range configs {
+		if fc.FieldType == models.FieldTypeFixed {
+			input.InputValues[fc.ColumnKey] = recordValues[fc.ColumnKey]
 		}
 	}
 

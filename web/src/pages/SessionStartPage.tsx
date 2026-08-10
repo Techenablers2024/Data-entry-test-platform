@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getTodaySummary, startSession } from '../api/sessions'
+import { getRecordProgress } from '../api/data'
 import { useSession } from '../context/SessionContext'
 import { formatSeconds } from '../lib/utils'
 import { useDeviceFingerprint } from '../hooks/useDeviceFingerprint'
@@ -18,6 +19,11 @@ export function SessionStartPage() {
   const { data: summary, isLoading } = useQuery({
     queryKey: ['today-summary'],
     queryFn: () => getTodaySummary().then((r) => r.data.data),
+  })
+
+  const { data: progress } = useQuery({
+    queryKey: ['record-progress'],
+    queryFn: () => getRecordProgress().then((r) => r.data.data),
   })
 
   // Start a live countdown once summary loads
@@ -100,6 +106,24 @@ export function SessionStartPage() {
             )}
           </div>
 
+          {progress && (
+            <div className="bg-gray-50 rounded-xl p-4 mb-4 text-sm space-y-2.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Your Progress</p>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Total pages</span>
+                <span className="font-medium text-gray-900">{progress.total}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Completed</span>
+                <span className="font-medium text-green-600">{progress.completed}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-gray-200">
+                <span className="text-gray-500">Pending</span>
+                <span className="font-medium text-blue-600">{progress.pending}</span>
+              </div>
+            </div>
+          )}
+
           {remainingSeconds <= 30 * 60 && (
             <div className={`rounded-xl p-3 mb-4 text-xs font-medium ${
               remainingSeconds <= 5 * 60
@@ -112,7 +136,7 @@ export function SessionStartPage() {
 
           <button onClick={() => navigate('/data-entry')}
             className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 transition-all text-base">
-            Continue Data Entry →
+            Continue Start Test →
           </button>
         </div>
       </div>
@@ -125,6 +149,24 @@ export function SessionStartPage() {
       <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Ready to start?</h1>
         <p className="text-gray-500 text-sm mb-6">Review your session availability below before starting.</p>
+
+        {progress && (
+          <div className="bg-gray-50 rounded-xl p-5 mb-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Your Progress</p>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Total pages</span>
+              <span className="font-semibold text-gray-900">{progress.total}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Completed</span>
+              <span className="font-semibold text-green-600">{progress.completed}</span>
+            </div>
+            <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+              <span className="text-gray-600">Pending</span>
+              <span className="font-semibold text-blue-600">{progress.pending}</span>
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="h-32 flex items-center justify-center">
@@ -169,6 +211,26 @@ export function SessionStartPage() {
             {summary?.sessions_used === summary?.sessions_allowed
               ? '✅ You have used all your sessions for today. Come back tomorrow!'
               : '⏰ Daily time limit reached. Come back tomorrow!'}
+          </div>
+        )}
+
+        {canStart && summary && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-800">
+            <p className="font-semibold text-center mb-2">
+              Starting Session {summary.sessions_used + 1} of {summary.sessions_allowed}
+            </p>
+            <div className="flex justify-between py-1">
+              <span>Completed today</span>
+              <span className="font-medium">{summary.sessions_used} session{summary.sessions_used !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span>Remaining after this</span>
+              <span className="font-medium">{summary.sessions_allowed - summary.sessions_used - 1} session{(summary.sessions_allowed - summary.sessions_used - 1) !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex justify-between py-1 border-t border-blue-200 mt-1">
+              <span>Daily time remaining</span>
+              <span className="font-medium font-mono">{formatSeconds(dailyRemaining ?? 0)}</span>
+            </div>
           </div>
         )}
 

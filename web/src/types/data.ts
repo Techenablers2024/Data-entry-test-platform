@@ -1,4 +1,4 @@
-export type FieldType = 'display' | 'text' | 'number' | 'date' | 'dropdown'
+export type FieldType = 'display' | 'text' | 'number' | 'date' | 'dropdown' | 'fixed'
 
 export interface FieldConfig {
   id: string
@@ -41,4 +41,10 @@ export interface Batch {
   uploaded_at: string
   uploaded_by: string
   record_count: number
+}
+
+export interface RecordProgress {
+  total: number
+  completed: number
+  pending: number
 }

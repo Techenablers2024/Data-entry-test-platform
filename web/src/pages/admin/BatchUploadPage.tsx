@@ -100,14 +100,15 @@ export function BatchUploadPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Filename', 'Records', 'Uploaded', 'Actions'].map((h) => (
+                {['Batch #', 'Filename', 'Records', 'Uploaded', 'Actions'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {(batches ?? []).map((b: Batch) => (
+              {(batches ?? []).map((b: Batch, idx: number) => (
                 <tr key={b.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-semibold text-blue-600">Batch #{idx + 1}</td>
                   <td className="px-4 py-3 font-medium text-gray-900">{b.filename}</td>
                   <td className="px-4 py-3 text-gray-600">{b.record_count}</td>
                   <td className="px-4 py-3 text-gray-500">{new Date(b.uploaded_at).toLocaleString('en-IN')}</td>
@@ -118,7 +119,7 @@ export function BatchUploadPage() {
                 </tr>
               ))}
               {(batches ?? []).length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">No batches uploaded yet</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No batches uploaded yet</td></tr>
               )}
             </tbody>
           </table>

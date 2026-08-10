@@ -13,6 +13,7 @@ const (
 	FieldTypeNumber   FieldType = "number"
 	FieldTypeDate     FieldType = "date"
 	FieldTypeDropdown FieldType = "dropdown"
+	FieldTypeFixed    FieldType = "fixed"
 )
 
 type FieldConfig struct {

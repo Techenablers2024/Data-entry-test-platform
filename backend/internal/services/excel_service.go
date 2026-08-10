@@ -242,6 +242,9 @@ func parseOneFieldConfig(label, rawType string, index int, optionsMap map[string
 	case lower == "date":
 		fc.FieldType = models.FieldTypeDate
 
+	case lower == "fixed":
+		fc.FieldType = models.FieldTypeFixed
+
 	case strings.HasPrefix(lower, "dropdown:"):
 		optPart := strings.TrimSpace(rawType[len("dropdown:"):])
 
@@ -268,7 +271,7 @@ func parseOneFieldConfig(label, rawType string, index int, optionsMap map[string
 
 	default:
 		return nil, fmt.Errorf(
-			"column %d (%q): unknown type %q (valid: display, text, number, date, dropdown:ColName or dropdown:A|B|C)",
+			"column %d (%q): unknown type %q (valid: display, text, number, date, fixed, dropdown:ColName or dropdown:A|B|C)",
 			index+1, label, rawType,
 		)
 	}

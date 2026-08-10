@@ -82,6 +82,7 @@ func main() {
 	// Data entry routes (protected + device-bound)
 	records := api.Group("/records")
 	records.Use(middleware.Auth(cfg), middleware.Device())
+	records.GET("/progress", dataHandler.Progress)
 	records.GET("/next", dataHandler.NextRecord)
 	records.GET("/:id", dataHandler.GetRecord)
 	records.POST("/:id/submit", dataHandler.SubmitRecord)

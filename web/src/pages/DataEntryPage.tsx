@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getNextRecord, submitRecord } from '../api/data'
 import { useSession } from '../context/SessionContext'
@@ -46,9 +46,23 @@ export function DataEntryPage() {
   const referenceFields = data?.field_config.filter((f) => f.is_reference) ?? []
   const inputFields     = data?.field_config.filter((f) => !f.is_reference) ?? []
 
+  // Pre-populate fixed fields from record values
+  useEffect(() => {
+    if (!data) return
+    const values = data.record.values as Record<string, string>
+    const fixed: Record<string, string> = {}
+    data.field_config.filter(f => f.field_type === 'fixed').forEach(f => {
+      fixed[f.column_key] = values[f.column_key] ?? ''
+    })
+    if (Object.keys(fixed).length > 0) {
+      setInputs(prev => ({ ...fixed, ...prev }))
+    }
+  }, [data?.record.id])
+
   const validate = (): boolean => {
     const errs: Record<string, string> = {}
     for (const f of inputFields) {
+      if (f.field_type === 'fixed') continue
       const val = inputs[f.column_key] ?? ''
       if (!val.trim()) { errs[f.column_key] = 'This field is required'; continue }
       if (f.field_type === 'number' && isNaN(Number(val))) errs[f.column_key] = 'Must be a number'
@@ -129,7 +143,7 @@ export function DataEntryPage() {
           {submitSuccess  && <span className="text-green-600 font-medium">✅ Submitted!</span>}
           <button onClick={handleScreenshot}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 transition-all duration-150 hover:bg-gray-100 hover:border-gray-400 hover:shadow-sm active:scale-95">
-            📷 Screenshot
+            📷 Take Screenshot
           </button>
           <button onClick={handleSubmit} disabled={submitMutation.isPending}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white rounded-lg font-medium transition-all duration-150 hover:bg-blue-700 hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100">
@@ -183,8 +197,9 @@ export function DataEntryPage() {
                   {inputField.label} <span className="text-red-500">*</span>
                 </label>
                 <FieldInput
+                  key={`${data.record.id}-${inputField.column_key}`}
                   field={inputField}
-                  value={inputs[inputField.column_key] ?? ''}
+                  value={inputField.field_type === 'fixed' ? refValue : (inputs[inputField.column_key] ?? '')}
                   error={error}
                   onChange={(val) => {
                     setInputs((prev) => ({ ...prev, [inputField.column_key]: val }))
@@ -224,7 +239,10 @@ function FieldInput({ field, value, error, onChange }: FieldInputProps) {
 
   return (
     <div>
-      {field.field_type === 'dropdown' ? (
+      {field.field_type === 'fixed' ? (
+        <input type="text" value={value} readOnly
+          className={`w-full border rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200`} />
+      ) : field.field_type === 'dropdown' ? (
         <select value={value} onChange={(e) => onChange(e.target.value)} className={base} {...noPaste}>
           <option value="">Select…</option>
           {field.dropdown_options?.map((opt) => (

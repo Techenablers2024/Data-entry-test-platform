@@ -1,4 +1,4 @@
-export type FieldType = 'display' | 'text' | 'number' | 'date' | 'dropdown'
+export type FieldType = 'display' | 'text' | 'number' | 'date' | 'dropdown' | 'fixed'
 
 export interface FieldConfig {
   id: string
@@ -22,4 +22,10 @@ export interface DataRecord {
 export interface RecordWithConfig {
   record: DataRecord
   field_config: FieldConfig[]
+}
+
+export interface RecordProgress {
+  total: number
+  completed: number
+  pending: number
 }

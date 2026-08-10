@@ -1,8 +1,11 @@
 import { apiClient } from './client'
-import type { RecordWithConfig } from '../types/data'
+import type { RecordWithConfig, RecordProgress } from '../types/data'
 
 export const getNextRecord = () =>
   apiClient.get<{ data: RecordWithConfig }>('/records/next')
+
+export const getRecordProgress = () =>
+  apiClient.get<{ data: RecordProgress }>('/records/progress')
 
 export const submitRecord = (
   recordId: string,

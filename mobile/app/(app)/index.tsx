@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Sty
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getTodaySummary, startSession } from '../../api/sessions'
+import { getRecordProgress } from '../../api/data'
 import { useSession } from '../../context/SessionContext'
 import { getDeviceName } from '../../lib/deviceId'
 import { formatSeconds } from '../../lib/utils'
@@ -20,6 +21,13 @@ export default function SessionGateScreen() {
   const { data: summary, isLoading } = useQuery({
     queryKey: ['today-summary'],
     queryFn: () => getTodaySummary().then(r => r.data.data),
+    staleTime: 0,
+    refetchOnMount: true,
+  })
+
+  const { data: progress } = useQuery({
+    queryKey: ['record-progress'],
+    queryFn: () => getRecordProgress().then(r => r.data.data),
     staleTime: 0,
     refetchOnMount: true,
   })
@@ -52,10 +60,15 @@ export default function SessionGateScreen() {
     }
   }
 
-  const handleLogout = async () => {
-    try { await logout() } catch {}
-    await clearAuth()
-    router.replace('/(auth)/login')
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Logout', style: 'destructive', onPress: async () => {
+        try { await logout() } catch {}
+        await clearAuth()
+        router.replace('/(auth)/login')
+      }},
+    ])
   }
 
   const timerColor = remainingSeconds <= 5 * 60 ? '#dc2626'
@@ -103,6 +116,16 @@ export default function SessionGateScreen() {
           )}
         </View>
 
+        {/* Progress */}
+        {progress && (
+          <View style={s.card}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Your Progress</Text>
+            <Row label="Total pages" value={String(progress.total)} />
+            <Row label="Completed" value={String(progress.completed)} valueColor="#16a34a" />
+            <Row label="Pending" value={String(progress.pending)} valueColor="#2563eb" last />
+          </View>
+        )}
+
         {remainingSeconds <= 30 * 60 && (
           <View style={[s.warningBox, remainingSeconds <= 5 * 60 ? { backgroundColor: '#fee2e2', borderColor: '#fca5a5' } : {}]}>
             <Text style={{ color: remainingSeconds <= 5 * 60 ? '#991b1b' : '#92400e', fontSize: 12 }}>
@@ -112,7 +135,7 @@ export default function SessionGateScreen() {
         )}
 
         <TouchableOpacity style={s.btn} onPress={() => router.push('/(app)/data-entry')}>
-          <Text style={s.btnText}>Continue Data Entry →</Text>
+          <Text style={s.btnText}>Continue Start Test →</Text>
         </TouchableOpacity>
       </ScrollView>
     )
@@ -133,43 +156,66 @@ export default function SessionGateScreen() {
 
       {isLoading ? (
         <ActivityIndicator size="large" color="#2563eb" style={{ marginVertical: 40 }} />
-      ) : summary ? (
-        <View style={s.card}>
-          <Row label="Sessions today" value={`${summary.sessions_used} / ${summary.sessions_allowed}`} />
-          <Row label="Time used" value={formatSeconds(summary.total_elapsed_seconds)} />
-          <Row label="Time remaining" value={formatSeconds(dailyRemaining ?? 0)}
-            valueColor={(dailyRemaining ?? 0) < 3600 ? '#d97706' : '#16a34a'} />
-          <Row label="Per session (max)" value="4 hours" last />
+      ) : (
+        <>
+          {progress && (
+            <View style={s.card}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Your Progress</Text>
+              <Row label="Total pages" value={String(progress.total)} />
+              <Row label="Completed" value={String(progress.completed)} valueColor="#16a34a" />
+              <Row label="Pending" value={String(progress.pending)} valueColor="#2563eb" last />
+            </View>
+          )}
 
-          {(dailyRemaining ?? 0) < 4 * 3600 && (dailyRemaining ?? 0) > 0 && (
-            <View style={s.warningBox}>
-              <Text style={{ color: '#92400e', fontSize: 12 }}>
-                ⚠️ Only {formatSeconds(dailyRemaining ?? 0)} left today. Session ends at midnight IST.
+          {summary && (
+            <View style={s.card}>
+              <Row label="Sessions today" value={`${summary.sessions_used} / ${summary.sessions_allowed}`} />
+              <Row label="Time used" value={formatSeconds(summary.total_elapsed_seconds)} />
+              <Row label="Time remaining" value={formatSeconds(dailyRemaining ?? 0)}
+                valueColor={(dailyRemaining ?? 0) < 3600 ? '#d97706' : '#16a34a'} />
+              <Row label="Per session (max)" value="4 hours" last />
+              {(dailyRemaining ?? 0) < 4 * 3600 && (dailyRemaining ?? 0) > 0 && (
+                <View style={s.warningBox}>
+                  <Text style={{ color: '#92400e', fontSize: 12 }}>
+                    ⚠️ Only {formatSeconds(dailyRemaining ?? 0)} left today. Session ends at midnight IST.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {!canStart && (
+            <View style={[s.card, { alignItems: 'center' }]}>
+              <Text style={{ color: '#6b7280', textAlign: 'center' }}>
+                {summary?.sessions_used === summary?.sessions_allowed
+                  ? '✅ All sessions used for today. Come back tomorrow!'
+                  : '⏰ Daily time limit reached. Come back tomorrow!'}
               </Text>
             </View>
           )}
-        </View>
-      ) : null}
 
-      {!canStart && !isLoading && (
-        <View style={[s.card, { alignItems: 'center' }]}>
-          <Text style={{ color: '#6b7280', textAlign: 'center' }}>
-            {summary?.sessions_used === summary?.sessions_allowed
-              ? '✅ All sessions used for today. Come back tomorrow!'
-              : '⏰ Daily time limit reached. Come back tomorrow!'}
-          </Text>
-        </View>
+          {canStart && summary && (
+            <View style={[s.card, { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 12 }]}>
+              <Text style={{ color: '#1d4ed8', textAlign: 'center', fontWeight: '700', fontSize: 15, marginBottom: 10 }}>
+                Starting Session {summary.sessions_used + 1} of {summary.sessions_allowed}
+              </Text>
+              <Row label="Completed today" value={`${summary.sessions_used} session${summary.sessions_used !== 1 ? 's' : ''}`} />
+              <Row label="Remaining after this" value={`${summary.sessions_allowed - summary.sessions_used - 1} session${(summary.sessions_allowed - summary.sessions_used - 1) !== 1 ? 's' : ''}`} />
+              <Row label="Daily time remaining" value={formatSeconds(dailyRemaining ?? 0)} last />
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={handleStart}
+            disabled={!canStart || starting}
+            style={[s.btn, !canStart && { backgroundColor: '#d1d5db' }]}
+          >
+            {starting ? <ActivityIndicator color="#fff" /> : (
+              <Text style={[s.btnText, !canStart && { color: '#9ca3af' }]}>Start Session</Text>
+            )}
+          </TouchableOpacity>
+        </>
       )}
-
-      <TouchableOpacity
-        onPress={handleStart}
-        disabled={!canStart || starting}
-        style={[s.btn, !canStart && { backgroundColor: '#d1d5db' }]}
-      >
-        {starting ? <ActivityIndicator color="#fff" /> : (
-          <Text style={[s.btnText, !canStart && { color: '#9ca3af' }]}>Start Session</Text>
-        )}
-      </TouchableOpacity>
     </ScrollView>
   )
 }

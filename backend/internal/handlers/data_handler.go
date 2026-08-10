@@ -20,6 +20,16 @@ func NewDataHandler(dataSvc *services.DataService, excelSvc *services.ExcelServi
 	return &DataHandler{dataService: dataSvc, excelService: excelSvc}
 }
 
+func (h *DataHandler) Progress(c *gin.Context) {
+	userID := GetUserIDFromContext(c)
+	result, err := h.dataService.GetProgress(userID)
+	if err != nil {
+		utils.InternalError(c, err.Error())
+		return
+	}
+	utils.OK(c, result)
+}
+
 func (h *DataHandler) NextRecord(c *gin.Context) {
 	userID := GetUserIDFromContext(c)
 	result, err := h.dataService.NextRecord(userID)

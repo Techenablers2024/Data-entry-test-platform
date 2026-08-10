@@ -1,9 +1,18 @@
-import { Navigate, NavLink, Outlet } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { logout } from '../../api/auth'
 
 export function AdminLayout() {
-  const { user } = useAuth()
+  const { user, clearAuth } = useAuth()
+  const navigate = useNavigate()
   if (!user?.is_admin) return <Navigate to="/" replace />
+
+  const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to logout?')) return
+    try { await logout() } catch {}
+    clearAuth()
+    navigate('/login')
+  }
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
@@ -17,7 +26,10 @@ export function AdminLayout() {
           <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">DE</div>
           <span className="font-semibold text-gray-800">Admin Panel</span>
         </div>
-        <NavLink to="/" className="text-sm text-blue-600 hover:underline">← Back to App</NavLink>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">{user?.name}</span>
+          <button onClick={handleLogout} className="text-sm text-red-600 hover:underline">Logout</button>
+        </div>
       </header>
 
       <div className="flex flex-1">

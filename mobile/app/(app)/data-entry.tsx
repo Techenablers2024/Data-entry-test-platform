@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   Alert, ActivityIndicator, StyleSheet, StatusBar, Platform,
@@ -55,9 +55,23 @@ export default function DataEntryScreen() {
   const inputFields     = data?.field_config.filter(f => !f.is_reference) ?? []
   const referenceFields = data?.field_config.filter(f => f.is_reference)  ?? []
 
+  // Pre-populate fixed fields from record values
+  useEffect(() => {
+    if (!data) return
+    const values = data.record.values as Record<string, string>
+    const fixed: Record<string, string> = {}
+    data.field_config.filter(f => f.field_type === 'fixed').forEach(f => {
+      fixed[f.column_key] = values[f.column_key] ?? ''
+    })
+    if (Object.keys(fixed).length > 0) {
+      setInputs(prev => ({ ...fixed, ...prev }))
+    }
+  }, [data?.record.id])
+
   const validate = () => {
     const errs: Record<string, string> = {}
     for (const f of inputFields) {
+      if (f.field_type === 'fixed') continue
       const val = inputs[f.column_key] ?? ''
       if (!val.trim()) { errs[f.column_key] = 'Required'; continue }
       if (f.field_type === 'number' && isNaN(Number(val))) errs[f.column_key] = 'Must be a number.'
@@ -137,11 +151,16 @@ export default function DataEntryScreen() {
         <View style={s.dropdown}>
           <Text style={s.dropdownRecord}>Record #{data?.record.global_sequence ?? '—'}</Text>
           <View style={s.dropdownDivider} />
-          <TouchableOpacity style={s.dropdownItem} onPress={async () => {
+          <TouchableOpacity style={s.dropdownItem} onPress={() => {
             setMenuOpen(false)
-            try { await logout() } catch {}
-            await clearAuth()
-            router.replace('/(auth)/login')
+            Alert.alert('Logout', 'Are you sure you want to logout?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Logout', style: 'destructive', onPress: async () => {
+                try { await logout() } catch {}
+                await clearAuth()
+                router.replace('/(auth)/login')
+              }},
+            ])
           }}>
             <Text style={[s.dropdownItemText, { color: '#dc2626' }]}>Logout</Text>
           </TouchableOpacity>
@@ -179,27 +198,31 @@ export default function DataEntryScreen() {
           contentContainerStyle={s.inputList}
           keyboardShouldPersistTaps="handled"
         >
-          {inputFields.map(f => (
-            <FieldInput
-              key={f.id} field={f}
-              value={inputs[f.column_key] ?? ''}
-              error={fieldErrors[f.column_key]}
-              showDatePicker={showDateFor === f.column_key}
-              onShowDatePicker={() => setShowDateFor(showDateFor === f.column_key ? null : f.column_key)}
-              onChange={val => {
-                setInputs(p => ({ ...p, [f.column_key]: val }))
-                if (fieldErrors[f.column_key])
-                  setFieldErrors(p => { const n = { ...p }; delete n[f.column_key]; return n })
-              }}
-            />
-          ))}
+          {inputFields.map((f, idx) => {
+            const pairedRef = referenceFields[idx]
+            const pairedRefValue = pairedRef ? (refValues[pairedRef.column_key] ?? '') : ''
+            return (
+              <FieldInput
+                key={f.id} field={f}
+                value={f.field_type === 'fixed' ? pairedRefValue : (inputs[f.column_key] ?? '')}
+                error={fieldErrors[f.column_key]}
+                showDatePicker={showDateFor === f.column_key}
+                onShowDatePicker={() => setShowDateFor(showDateFor === f.column_key ? null : f.column_key)}
+                onChange={val => {
+                  setInputs(p => ({ ...p, [f.column_key]: val }))
+                  if (fieldErrors[f.column_key])
+                    setFieldErrors(p => { const n = { ...p }; delete n[f.column_key]; return n })
+                }}
+              />
+            )
+          })}
         </ScrollView>
       </ViewShot>
 
       {/* ── Bottom action bar ── */}
       <View style={s.bottomBar}>
         <TouchableOpacity onPress={handleScreenshot} style={s.btnSecondary}>
-          <Text style={s.btnSecondaryText}>📷</Text>
+          <Text style={s.btnSecondaryText}>📷 Take Screenshot</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleSubmit} disabled={submitMut.isPending} style={[s.btn, { flex: 1 }]}>
           {submitMut.isPending
@@ -276,9 +299,14 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
     <View style={s.fieldWrap}>
       <Text style={s.inputLabel}>{field.label} <Text style={{ color: '#ef4444' }}>*</Text></Text>
 
-      {field.field_type === 'dropdown' ? (
+      {field.field_type === 'fixed' ? (
+        <TextInput
+          style={[s.textInput, { backgroundColor: '#f3f4f6', color: '#6b7280' }]}
+          value={value} editable={false}
+        />
+      ) : field.field_type === 'dropdown' ? (
         <View style={[s.pickerWrapper, error ? s.inputError : null]}>
-          <Picker selectedValue={value} onValueChange={onChange} style={{ height: 48 }}>
+          <Picker key={value} selectedValue={value} onValueChange={onChange} style={{ height: 48 }}>
             <Picker.Item label="Select…" value="" />
             {field.dropdown_options?.map(opt => <Picker.Item key={opt} label={opt} value={opt} />)}
           </Picker>
@@ -293,7 +321,8 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
           {showDatePicker && (
             <DateTimePicker
               value={value ? new Date(value) : new Date()}
-              mode="date" display="default"
+              mode="date"
+              display={Platform.OS === 'android' ? 'calendar' : 'default'}
               onChange={(_, date) => {
                 onShowDatePicker()
                 if (date) onChange(date.toISOString().split('T')[0])

@@ -34,6 +34,7 @@ func RunMigrations(db *gorm.DB) {
 	files := []string{
 		"internal/db/migrations/001_initial.sql",
 		"internal/db/migrations/002_validation.sql",
+		"internal/db/migrations/003_add_fixed_field_type.sql",
 	}
 	for _, path := range files {
 		sql, err := os.ReadFile(path)
