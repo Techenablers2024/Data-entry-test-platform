@@ -25,4 +25,5 @@ type FieldConfig struct {
 	IsReference     bool           `gorm:"not null;default:false" json:"is_reference"`
 	DropdownOptions pq.StringArray `gorm:"type:text[]" json:"dropdown_options,omitempty"`
 	SortOrder       int            `gorm:"not null" json:"sort_order"`
+	Group           string         `gorm:"not null;default:''" json:"group"`
 }

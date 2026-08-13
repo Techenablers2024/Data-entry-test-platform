@@ -35,6 +35,7 @@ export function AdminLayout() {
       <div className="flex flex-1">
         <aside className="w-56 bg-white border-r border-gray-200 p-4 flex flex-col gap-1">
           <NavLink to="/admin/users"   className={linkClass}>👥 Users</NavLink>
+          <NavLink to="/admin/admins"  className={linkClass}>🛡️ Admins</NavLink>
           <NavLink to="/admin/batches" className={linkClass}>📊 Data Upload</NavLink>
           <NavLink to="/admin/records" className={linkClass}>📋 Records</NavLink>
         </aside>

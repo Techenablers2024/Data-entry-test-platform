@@ -49,7 +49,7 @@ func (s *DataService) GetProgress(userID uuid.UUID) (*RecordProgress, error) {
 	}, nil
 }
 
-// NextRecord returns the lowest-sequence active record not yet submitted by this user.
+// NextRecord returns a random active record not yet submitted by this user.
 func (s *DataService) NextRecord(userID uuid.UUID) (*RecordWithConfig, error) {
 	var submittedIDs []uuid.UUID
 	s.db.Model(&models.UserSubmission{}).
@@ -58,7 +58,7 @@ func (s *DataService) NextRecord(userID uuid.UUID) (*RecordWithConfig, error) {
 
 	var record models.DataRecord
 	query := s.db.Where("status = ?", models.RecordStatusActive).
-		Order("global_sequence ASC")
+		Order("RANDOM()")
 
 	if len(submittedIDs) > 0 {
 		query = query.Where("id NOT IN ?", submittedIDs)

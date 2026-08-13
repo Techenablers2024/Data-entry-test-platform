@@ -1,11 +1,13 @@
 export interface User {
   id: string
+  display_id: string
   name: string
   mobile: string
   email?: string
   status: 'pending' | 'active' | 'disabled'
   is_admin: boolean
   created_at: string
+  approved_at?: string
 }
 
 export interface LoginPayload {

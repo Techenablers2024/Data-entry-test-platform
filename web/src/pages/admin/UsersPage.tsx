@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { listUsers, approveUser, disableUser, enableUser, resetPassword } from '../../api/admin'
+import { ReceiptModal } from './ReceiptModal'
 import type { User } from '../../types/auth'
 
 export function UsersPage() {
@@ -12,18 +13,20 @@ export function UsersPage() {
   const [resetTarget, setResetTarget] = useState<User | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [resetMsg, setResetMsg] = useState('')
+  const [receiptUser, setReceiptUser] = useState<User | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', statusFilter],
     queryFn: () => listUsers(statusFilter || undefined).then((r) => r.data.data),
   })
 
-  // Client-side search filter
+  // Client-side search filter — exclude admins (shown in Admins tab)
   const filtered = useMemo(() => {
     if (!data) return []
+    const nonAdmins = data.filter(u => !u.is_admin)
     const q = search.toLowerCase().trim()
-    if (!q) return data
-    return data.filter(u =>
+    if (!q) return nonAdmins
+    return nonAdmins.filter(u =>
       u.name.toLowerCase().includes(q) ||
       u.mobile.includes(q) ||
       (u.email ?? '').toLowerCase().includes(q)
@@ -98,7 +101,7 @@ export function UsersPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Name', 'Mobile', 'Email', 'Status', 'Registered', 'Actions'].map(h => (
+                {['ID', 'Name', 'Mobile', 'Email', 'Status', 'Registered', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -106,6 +109,7 @@ export function UsersPage() {
             <tbody className="divide-y divide-gray-100">
               {filtered.map(u => (
                 <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 font-mono text-xs text-blue-600">{u.display_id || '—'}</td>
                   <td className="px-4 py-3 font-medium text-gray-900">{u.name}</td>
                   <td className="px-4 py-3 text-gray-600">{u.mobile}</td>
                   <td className="px-4 py-3 text-gray-500">{u.email ?? '—'}</td>
@@ -130,8 +134,12 @@ export function UsersPage() {
                           className="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200">Reset PW</button>
                       )}
                       {!u.is_admin && (
-                        <button onClick={() => navigate(`/admin/reports/${u.id}?name=${encodeURIComponent(u.name)}`)}
-                          className="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-lg hover:bg-indigo-200">📈 Report</button>
+                        <>
+                          <button onClick={() => navigate(`/admin/reports/${u.id}?name=${encodeURIComponent(u.name)}`)}
+                            className="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-lg hover:bg-indigo-200">📈 Report</button>
+                          <button onClick={() => setReceiptUser(u)}
+                            className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs rounded-lg hover:bg-purple-200">🧾 Receipt</button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -170,6 +178,7 @@ export function UsersPage() {
           </div>
         </div>
       )}
+      {receiptUser && <ReceiptModal user={receiptUser} onClose={() => setReceiptUser(null)} />}
     </div>
   )
 }

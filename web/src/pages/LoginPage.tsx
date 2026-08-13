@@ -134,6 +134,12 @@ export function LoginPage() {
               className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
               {isLoading ? 'Signing in…' : 'Sign In'}
             </button>
+            <div className="text-center mt-3">
+              <button type="button" onClick={() => navigate('/forgot-password')}
+                className="text-sm text-blue-600 hover:underline">
+                Forgot Password?
+              </button>
+            </div>
           </form>
         )}
 

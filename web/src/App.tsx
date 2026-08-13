@@ -7,12 +7,14 @@ import { AdminLayout } from './pages/admin/AdminLayout'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { PendingApprovalPage } from './pages/PendingApprovalPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { SessionStartPage } from './pages/SessionStartPage'
 import { DataEntryPage } from './pages/DataEntryPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { BatchUploadPage } from './pages/admin/BatchUploadPage'
 import { RecordsPage } from './pages/admin/RecordsPage'
 import { UserReportPage } from './pages/admin/UserReportPage'
+import { AdminsPage } from './pages/admin/AdminsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -28,9 +30,10 @@ export default function App() {
           <Router>
             <Routes>
               {/* Public */}
-              <Route path="/login"   element={<LoginPage />} />
-              <Route path="/signup"  element={<SignupPage />} />
-              <Route path="/pending" element={<PendingApprovalPage />} />
+              <Route path="/login"          element={<LoginPage />} />
+              <Route path="/signup"         element={<SignupPage />} />
+              <Route path="/pending"        element={<PendingApprovalPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
               {/* Protected app */}
               <Route element={<AppLayout />}>
@@ -43,6 +46,7 @@ export default function App() {
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Navigate to="/admin/users" replace />} />
                 <Route path="users"   element={<UsersPage />} />
+                <Route path="admins"  element={<AdminsPage />} />
                 <Route path="batches" element={<BatchUploadPage />} />
                 <Route path="records" element={<RecordsPage />} />
                 <Route path="reports/:id" element={<UserReportPage />} />

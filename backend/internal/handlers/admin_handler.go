@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"dataentry-platform/backend/internal/logger"
 	"dataentry-platform/backend/internal/middleware"
 	"dataentry-platform/backend/internal/models"
 	"dataentry-platform/backend/internal/services"
@@ -25,12 +26,42 @@ func NewAdminHandler(dataSvc *services.DataService, excelSvc *services.ExcelServ
 
 // ── User management ──────────────────────────────────────────────────────────
 
+func (h *AdminHandler) CreateAdmin(c *gin.Context) {
+	var body struct {
+		Name     string  `json:"name" binding:"required"`
+		Mobile   string  `json:"mobile" binding:"required"`
+		Password string  `json:"password" binding:"required,min=6"`
+		Email    *string `json:"email"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+	user, err := h.authSvc.CreateAdmin(body.Name, body.Mobile, body.Password, body.Email)
+	if err != nil {
+		utils.Conflict(c, err.Error())
+		return
+	}
+	actorID := GetUserIDFromContext(c)
+	logger.Audit("admin_created", "New admin created: "+body.Mobile, actorID.String())
+	utils.Created(c, user)
+}
+
+func (h *AdminHandler) ListAdmins(c *gin.Context) {
+	var admins []models.User
+	if err := h.db.Where("is_admin = ?", true).Order("created_at ASC").Find(&admins).Error; err != nil {
+		utils.InternalError(c, err.Error())
+		return
+	}
+	utils.OK(c, admins)
+}
+
 func (h *AdminHandler) ListUsers(c *gin.Context) {
 	db := h.db
 	status := c.Query("status") // optional filter
 
 	var users []models.User
-	q := db.Order("created_at DESC")
+	q := db.Where("is_admin = ?", false).Order("created_at DESC")
 	if status != "" {
 		q = q.Where("status = ?", status)
 	}
@@ -73,6 +104,12 @@ func (h *AdminHandler) setUserStatus(c *gin.Context, status models.UserStatus, i
 		utils.InternalError(c, err.Error())
 		return
 	}
+	actorID := GetUserIDFromContext(c)
+	event := "user_status_changed"
+	if isApproval {
+		event = "user_approved"
+	}
+	logger.Audit(event, "User "+targetID.String()+" status set to "+string(status), actorID.String())
 	utils.OK(c, gin.H{"message": "user status updated"})
 }
 

@@ -2,7 +2,7 @@ import type { FieldConfig, DataRecord } from '../types/data'
 
 interface WatermarkOptions {
   username: string
-  recordSeq: number
+  recordSeq: string | number
   record: DataRecord
   fieldConfig: FieldConfig[]
   inputValues: Record<string, string>

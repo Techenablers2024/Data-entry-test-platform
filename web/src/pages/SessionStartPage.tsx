@@ -4,12 +4,16 @@ import { useQuery } from '@tanstack/react-query'
 import { getTodaySummary, startSession } from '../api/sessions'
 import { getRecordProgress } from '../api/data'
 import { useSession } from '../context/SessionContext'
+import { useAuth } from '../context/AuthContext'
 import { formatSeconds } from '../lib/utils'
 import { useDeviceFingerprint } from '../hooks/useDeviceFingerprint'
+
+const MAX_DAILY = 8 * 60 * 60
 
 export function SessionStartPage() {
   const navigate = useNavigate()
   const { activeSession, setActiveSession, remainingSeconds } = useSession()
+  const { user } = useAuth()
   const { deviceId, deviceName } = useDeviceFingerprint()
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState('')
@@ -26,18 +30,20 @@ export function SessionStartPage() {
     queryFn: () => getRecordProgress().then((r) => r.data.data),
   })
 
-  // Start a live countdown once summary loads
   useEffect(() => {
     if (summary?.remaining_daily_seconds === undefined) return
     setDailyRemaining(summary.remaining_daily_seconds)
     if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => {
-      setDailyRemaining(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
-    }, 1000)
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
+    // Only countdown if remaining < 8hrs (midnight is the binding constraint)
+    if (summary.remaining_daily_seconds < MAX_DAILY) {
+      timerRef.current = setInterval(() => {
+        setDailyRemaining(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
+      }, 1000)
     }
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [summary?.remaining_daily_seconds])
+
+  const [sessionMsg, setSessionMsg] = useState('')
 
   const handleStart = async () => {
     if (!deviceId) return
@@ -45,11 +51,13 @@ export function SessionStartPage() {
     setIsStarting(true)
     try {
       const res = await startSession(deviceName)
-      setActiveSession(res.data.data)
-      navigate('/data-entry')
+      const sess = res.data.data
+      setActiveSession(sess)
+      const action = sess.elapsed_seconds > 0 ? 'resumed' : 'started'
+      setSessionMsg(`Session ${sess.session_number} of 2 ${action}!`)
+      setTimeout(() => navigate('/data-entry'), 1500)
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to start session.')
-    } finally {
       setIsStarting(false)
     }
   }
@@ -66,6 +74,15 @@ export function SessionStartPage() {
 
     return (
       <div className="flex-1 flex items-center justify-center p-4">
+        {sessionMsg && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl px-10 py-8 text-center">
+              <div className="text-4xl mb-3">▶️</div>
+              <p className="text-xl font-bold text-gray-900">{sessionMsg}</p>
+              <p className="text-sm text-gray-500 mt-1">Taking you to the test…</p>
+            </div>
+          </div>
+        )}
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
           <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -134,7 +151,10 @@ export function SessionStartPage() {
             </div>
           )}
 
-          <button onClick={() => navigate('/data-entry')}
+          <button onClick={() => {
+              setSessionMsg(`Session ${activeSession.session_number} of 2 resumed!`)
+              setTimeout(() => navigate('/data-entry'), 1500)
+            }}
             className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 transition-all text-base">
             Continue Start Test →
           </button>
@@ -146,8 +166,20 @@ export function SessionStartPage() {
   // ── Start new session view ───────────────────────────────────────────────
   return (
     <div className="flex-1 flex items-center justify-center p-4">
+      {sessionMsg && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
+          <div className="bg-white rounded-2xl shadow-xl px-10 py-8 text-center">
+            <div className="text-4xl mb-3">🚀</div>
+            <p className="text-xl font-bold text-gray-900">{sessionMsg}</p>
+            <p className="text-sm text-gray-500 mt-1">Taking you to the test…</p>
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Ready to start?</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Ready to start?</h1>
+        {user?.display_id && (
+          <p className="text-xs font-mono text-blue-600 mb-1">{user.display_id}</p>
+        )}
         <p className="text-gray-500 text-sm mb-6">Review your session availability below before starting.</p>
 
         {progress && (

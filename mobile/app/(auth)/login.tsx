@@ -115,7 +115,11 @@ export default function LoginScreen() {
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Sign In</Text>}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/(auth)/signup')} style={{ marginTop: 16 }}>
+        <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={{ marginTop: 12 }}>
+          <Text style={{ textAlign: 'center', color: '#2563eb', fontSize: 14 }}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push('/(auth)/signup')} style={{ marginTop: 12 }}>
           <Text style={{ textAlign: 'center', color: '#6b7280' }}>
             Don't have an account? <Text style={{ color: '#2563eb', fontWeight: '600' }}>Sign up</Text>
           </Text>

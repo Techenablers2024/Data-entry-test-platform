@@ -5,7 +5,7 @@ import type { RefObject } from 'react'
 
 interface ScreenshotOptions {
   username: string
-  recordSeq: number
+  recordSeq: string | number
 }
 
 export async function takeScreenshot(

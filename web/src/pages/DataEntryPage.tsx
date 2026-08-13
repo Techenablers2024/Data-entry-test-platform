@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getNextRecord, submitRecord } from '../api/data'
+import { getNextRecord, submitRecord, getRecordProgress } from '../api/data'
 import { useSession } from '../context/SessionContext'
 import { useAuth } from '../context/AuthContext'
 import { takeScreenshot } from '../hooks/useScreenshot'
+import { formatSeconds } from '../lib/utils'
 import type { FieldConfig } from '../types/data'
 import { useNavigate } from 'react-router-dom'
 
 export function DataEntryPage() {
-  const { activeSession } = useSession()
+  const { activeSession, remainingSeconds } = useSession()
   const { user } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -24,6 +25,11 @@ export function DataEntryPage() {
     retry: false,
     staleTime: 0,       // always re-fetch fresh after submit
     refetchOnMount: true,
+  })
+
+  const { data: progress } = useQuery({
+    queryKey: ['record-progress'],
+    queryFn: () => getRecordProgress().then((r) => r.data.data),
   })
 
   const submitMutation = useMutation({
@@ -78,6 +84,7 @@ export function DataEntryPage() {
       document.querySelector('[data-field-error]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
+    if (!window.confirm('Are you sure you want to submit this record and move to the next?')) return
     submitMutation.mutate()
   }
 
@@ -86,7 +93,7 @@ export function DataEntryPage() {
     try {
       await takeScreenshot({
         username:    user?.name ?? 'user',
-        recordSeq:   data.record.global_sequence,
+        recordSeq:   data.record.record_code,
         record:      data.record,
         fieldConfig: data.field_config,
         inputValues: inputs,
@@ -136,7 +143,7 @@ export function DataEntryPage() {
       {/* Toolbar */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between text-sm shrink-0">
         <span className="text-gray-500">
-          Record <span className="font-semibold text-gray-800">#{data.record.global_sequence}</span>
+          Record <span className="font-semibold text-gray-800">{data.record.record_code}</span>
         </span>
         <div className="flex items-center gap-2">
           {screenshotMsg && <span className="text-green-600 font-medium">{screenshotMsg}</span>}
@@ -159,7 +166,10 @@ export function DataEntryPage() {
       )}
 
       {/* Sticky column headers */}
-      <div className="grid grid-cols-2 shrink-0 border-b border-gray-200 bg-white">
+      <div className="grid shrink-0 border-b border-gray-200 bg-white" style={{ gridTemplateColumns: '20% 40% 40%' }}>
+        <div className="px-4 py-2 bg-gray-800 text-white text-xs font-semibold uppercase tracking-wider border-r border-gray-700">
+          My Progress
+        </div>
         <div className="px-6 py-2 bg-blue-600 text-white text-xs font-semibold uppercase tracking-wider border-r border-blue-700">
           Reference Data
         </div>
@@ -169,18 +179,73 @@ export function DataEntryPage() {
       </div>
 
       {/* Rows — single scroll, perfectly aligned */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 flex overflow-hidden">
+        {/* ── Left stats panel (20%) — fixed height, independent scroll ── */}
+        <div className="shrink-0 bg-gray-50 border-r border-gray-200 p-4 flex flex-col gap-3 overflow-y-auto h-full" style={{ width: '20%' }}>
+          {/* Session */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Session</p>
+            <p className="text-sm font-bold text-gray-800">Session {activeSession?.session_number ?? '—'} of 2</p>
+            <p className={`text-2xl font-mono font-bold mt-1 ${remainingSeconds <= 5*60 ? 'text-red-600' : remainingSeconds <= 30*60 ? 'text-amber-600' : 'text-green-600'}`}>
+              {formatSeconds(remainingSeconds)}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">remaining in session</p>
+          </div>
+          {/* Record */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Current Record</p>
+            <p className="text-xl font-bold text-blue-600 font-mono">{data?.record.record_code ?? '—'}</p>
+          </div>
+          {/* Progress */}
+          {progress && (
+            <div className="bg-white rounded-xl border border-gray-200 p-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Pages</p>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-500">Total</span>
+                <span className="font-semibold text-gray-800">{progress.total}</span>
+              </div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-500">Done</span>
+                <span className="font-semibold text-green-600">{progress.completed}</span>
+              </div>
+              <div className="flex justify-between text-sm pt-1 border-t border-gray-100">
+                <span className="text-gray-500">Pending</span>
+                <span className="font-semibold text-blue-600">{progress.pending}</span>
+              </div>
+              {/* Progress bar */}
+              <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%` }} />
+              </div>
+            </div>
+          )}
+          {/* User */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">User</p>
+            <p className="text-sm font-medium text-gray-800 truncate">{user?.name ?? '—'}</p>
+            <p className="text-xs text-blue-600 font-mono mt-0.5">{user?.display_id ?? ''}</p>
+          </div>
+        </div>
+
+        {/* ── Reference + Enter Data (80%) ── */}
+        <div className="overflow-y-auto" style={{ width: '80%' }}>
         {inputFields.map((inputField, idx) => {
           const refField = referenceFields[idx]
           const refValue = refField ? values[refField.column_key] : ''
           const error = fieldErrors[inputField.column_key]
+          const showGroupHeader = inputField.group && (idx === 0 || inputField.group !== inputFields[idx - 1].group)
 
           return (
-            <div
-              key={inputField.id}
-              data-field-error={error ? 'true' : undefined}
-              className={`grid grid-cols-2 border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-            >
+            <div key={inputField.id}>
+              {showGroupHeader && (
+                <div className="bg-indigo-100 text-indigo-800 px-6 py-2 text-xs font-bold uppercase tracking-widest text-center col-span-2">
+                  {inputField.group}
+                </div>
+              )}
+              <div
+                data-field-error={error ? 'true' : undefined}
+                className={`grid grid-cols-2 border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+              >
               {/* Left cell — reference value */}
               <div className="px-6 py-4 border-r border-gray-200 bg-blue-50 flex flex-col justify-center">
                 <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-0.5">
@@ -209,8 +274,10 @@ export function DataEntryPage() {
                 />
               </div>
             </div>
+            </div>
           )
         })}
+        </div>
       </div>
     </div>
   )
@@ -250,7 +317,7 @@ function FieldInput({ field, value, error, onChange }: FieldInputProps) {
           ))}
         </select>
       ) : field.field_type === 'date' ? (
-        <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={base} {...noPaste} />
+        <DatePartsInput value={value} onChange={onChange} className={base} />
       ) : field.field_type === 'number' ? (
         <input type="number" value={value} onChange={(e) => onChange(e.target.value)}
           placeholder={`Enter ${field.label}`} className={base} {...noPaste} />
@@ -259,6 +326,40 @@ function FieldInput({ field, value, error, onChange }: FieldInputProps) {
           placeholder={`Enter ${field.label}`} className={base} {...noPaste} />
       )}
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  )
+}
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const CURRENT_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: CURRENT_YEAR - 1899 }, (_, i) => CURRENT_YEAR - i)
+
+function DatePartsInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className: string }) {
+  const parts = value ? value.split(' ') : []
+  const day   = parts[0] ?? ''
+  const month = parts[1] ?? ''
+  const year  = parts[2] ?? ''
+
+  const update = (d: string, m: string, y: string) => {
+    if (d && m && y) onChange(`${d} ${m} ${y}`)
+    else onChange('')
+  }
+
+  const sel = `${className} mr-1`
+  return (
+    <div className="flex gap-1">
+      <select value={day} onChange={e => update(e.target.value, month, year)} className={sel}>
+        <option value="">Day</option>
+        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>{d}</option>)}
+      </select>
+      <select value={month} onChange={e => update(day, e.target.value, year)} className={sel}>
+        <option value="">Month</option>
+        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+      </select>
+      <select value={year} onChange={e => update(day, month, e.target.value)} className={sel}>
+        <option value="">Year</option>
+        {YEARS.map(y => <option key={y} value={String(y)}>{y}</option>)}
+      </select>
     </div>
   )
 }

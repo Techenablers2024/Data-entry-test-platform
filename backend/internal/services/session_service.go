@@ -72,10 +72,25 @@ func (s *SessionService) TodaySummary(userID uuid.UUID) (*TodaySummary, error) {
 		totalElapsed = models.MaxDailySeconds
 	}
 
+	remainingByQuota := models.MaxDailySeconds - totalElapsed
+
+	// Cap by time until midnight IST — user can't use more time than what's left today
+	todayDate := todayIST()
+	midnight := time.Date(todayDate.Year(), todayDate.Month(), todayDate.Day()+1, 0, 0, 0, 0, IST)
+	secondsUntilMidnight := int(time.Until(midnight).Seconds())
+	if secondsUntilMidnight < 0 {
+		secondsUntilMidnight = 0
+	}
+
+	remainingDaily := remainingByQuota
+	if secondsUntilMidnight < remainingDaily {
+		remainingDaily = secondsUntilMidnight
+	}
+
 	return &TodaySummary{
 		SessionsUsed:    int64(len(sessions)),
 		TotalElapsed:    totalElapsed,
-		RemainingDaily:  models.MaxDailySeconds - totalElapsed,
+		RemainingDaily:  remainingDaily,
 		SessionsAllowed: models.MaxSessionsPerDay,
 	}, nil
 }

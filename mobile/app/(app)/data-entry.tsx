@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  Alert, ActivityIndicator, StyleSheet, StatusBar, Platform,
+  Alert, ActivityIndicator, StyleSheet, StatusBar, Platform, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import ViewShot from 'react-native-view-shot'
@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Picker } from '@react-native-picker/picker'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useRouter } from 'expo-router'
-import { getNextRecord, submitRecord } from '../../api/data'
+import { getNextRecord, submitRecord, getRecordProgress } from '../../api/data'
 import { useSession } from '../../context/SessionContext'
 import { useAuth } from '../../context/AuthContext'
 import { logout } from '../../api/auth'
@@ -36,6 +36,11 @@ export default function DataEntryScreen() {
     queryFn: () => getNextRecord().then(r => r.data.data),
     retry: false,
     staleTime: 0,
+  })
+
+  const { data: progress } = useQuery({
+    queryKey: ['record-progress'],
+    queryFn: () => getRecordProgress().then(r => r.data.data),
   })
 
   const submitMut = useMutation({
@@ -82,16 +87,23 @@ export default function DataEntryScreen() {
   }
 
   const handleSubmit = () => {
-    if (!activeSession) { router.replace('/(app)/'); return }
+    if (!activeSession) { router.replace('/(app)'); return }
     if (!validate()) { Alert.alert('Validation', 'Please fill all required fields.'); return }
-    submitMut.mutate()
+    Alert.alert(
+      'Submit Record',
+      'Are you sure you want to submit this record and move to the next?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Submit', onPress: () => submitMut.mutate() },
+      ]
+    )
   }
 
   const handleScreenshot = async () => {
     if (!data) return
     await takeScreenshot(printRef, {
       username:  user?.name ?? 'user',
-      recordSeq: data.record.global_sequence,
+      recordSeq: data.record.record_code,
     })
   }
 
@@ -104,8 +116,21 @@ export default function DataEntryScreen() {
     return (
       <View style={s.center}>
         <Text style={s.emptyText}>No active session.</Text>
-        <TouchableOpacity style={s.btn} onPress={() => router.replace('/(app)/')}>
+        <TouchableOpacity style={s.btn} onPress={() => router.replace('/(app)')}>
           <Text style={s.btnText}>Go to Session Start</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  if (user?.is_admin) {
+    return (
+      <View style={s.center}>
+        <Text style={{ fontSize: 40, marginBottom: 12 }}>🛡️</Text>
+        <Text style={[s.emptyText, { fontWeight: 'bold' }]}>Admin Access</Text>
+        <Text style={{ color: '#6b7280', textAlign: 'center', marginBottom: 16 }}>Admins cannot take tests.</Text>
+        <TouchableOpacity style={s.btn} onPress={() => router.replace('/(app)/admin')}>
+          <Text style={s.btnText}>Go to Admin Panel</Text>
         </TouchableOpacity>
       </View>
     )
@@ -130,7 +155,7 @@ export default function DataEntryScreen() {
 
       {/* ── Top bar ── */}
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => router.replace('/(app)/')} style={s.backBtn}>
+        <TouchableOpacity onPress={() => router.replace('/(app)')} style={s.backBtn}>
           <Text style={s.backText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
@@ -138,20 +163,71 @@ export default function DataEntryScreen() {
             ⏱ {formatSeconds(remainingSeconds)}
           </Text>
           <Text style={{ fontSize: 10, color: '#9ca3af' }}>
-            {user?.name}  ·  Record #{data?.record.global_sequence ?? '—'}
+            {user?.name}  ·  {data?.record.record_code ?? '—'}
           </Text>
         </View>
         <TouchableOpacity onPress={() => setMenuOpen(v => !v)} style={s.menuBtn}>
-          <Text style={s.menuText}>⋮</Text>
+          <Text style={s.menuText}>☰</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Dropdown menu ── */}
-      {menuOpen && (
-        <View style={s.dropdown}>
-          <Text style={s.dropdownRecord}>Record #{data?.record.global_sequence ?? '—'}</Text>
-          <View style={s.dropdownDivider} />
-          <TouchableOpacity style={s.dropdownItem} onPress={() => {
+      {/* ── Stats Bottom Sheet ── */}
+      <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={() => setMenuOpen(false)}>
+        <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setMenuOpen(false)} />
+        <View style={s.sheet}>
+          <View style={s.sheetHandle} />
+
+          <Text style={s.sheetTitle}>My Progress</Text>
+
+          {/* Session */}
+          <View style={s.sheetCard}>
+            <Text style={s.sheetLabel}>Session</Text>
+            <Text style={s.sheetValue}>Session {activeSession?.session_number ?? '—'} of 2</Text>
+            <Text style={[s.sheetTimer, { color: timerColor }]}>{formatSeconds(remainingSeconds)}</Text>
+            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>remaining in session</Text>
+          </View>
+
+          {/* Record */}
+          <View style={s.sheetCard}>
+            <Text style={s.sheetLabel}>Current Record</Text>
+            <Text style={[s.sheetValue, { color: '#2563eb', fontSize: 18, fontFamily: 'monospace' }]}>{data?.record.record_code ?? '—'}</Text>
+          </View>
+
+          {/* Pages */}
+          {progress && (
+            <View style={s.sheetCard}>
+              <Text style={s.sheetLabel}>Pages</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>{progress.total}</Text>
+                  <Text style={{ fontSize: 11, color: '#6b7280' }}>Total</Text>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#16a34a' }}>{progress.completed}</Text>
+                  <Text style={{ fontSize: 11, color: '#6b7280' }}>Done</Text>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#2563eb' }}>{progress.pending}</Text>
+                  <Text style={{ fontSize: 11, color: '#6b7280' }}>Pending</Text>
+                </View>
+              </View>
+              {/* Progress bar */}
+              <View style={{ height: 6, backgroundColor: '#e5e7eb', borderRadius: 3, marginTop: 10, overflow: 'hidden' }}>
+                <View style={{ height: 6, backgroundColor: '#16a34a', borderRadius: 3,
+                  width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%` as any }} />
+              </View>
+            </View>
+          )}
+
+          {/* User */}
+          <View style={s.sheetCard}>
+            <Text style={s.sheetLabel}>User</Text>
+            <Text style={s.sheetValue}>{user?.name ?? '—'}</Text>
+            <Text style={{ fontSize: 12, color: '#2563eb', fontFamily: 'monospace', marginTop: 2 }}>{user?.display_id ?? ''}</Text>
+          </View>
+
+          {/* Logout */}
+          <TouchableOpacity style={s.logoutBtn} onPress={() => {
             setMenuOpen(false)
             Alert.alert('Logout', 'Are you sure you want to logout?', [
               { text: 'Cancel', style: 'cancel' },
@@ -162,10 +238,10 @@ export default function DataEntryScreen() {
               }},
             ])
           }}>
-            <Text style={[s.dropdownItemText, { color: '#dc2626' }]}>Logout</Text>
+            <Text style={s.logoutText}>🚪 Logout</Text>
           </TouchableOpacity>
         </View>
-      )}
+      </Modal>
 
       {/* ── Collapsible reference panel ── */}
       <View style={s.refContainer}>
@@ -201,8 +277,15 @@ export default function DataEntryScreen() {
           {inputFields.map((f, idx) => {
             const pairedRef = referenceFields[idx]
             const pairedRefValue = pairedRef ? (refValues[pairedRef.column_key] ?? '') : ''
+            const showGroupHeader = f.group && (idx === 0 || f.group !== inputFields[idx - 1].group)
             return (
-              <FieldInput
+              <View key={f.id}>
+                {showGroupHeader && (
+                  <View style={s.groupHeader}>
+                    <Text style={s.groupHeaderText}>{f.group}</Text>
+                  </View>
+                )}
+                <FieldInput
                 key={f.id} field={f}
                 value={f.field_type === 'fixed' ? pairedRefValue : (inputs[f.column_key] ?? '')}
                 error={fieldErrors[f.column_key]}
@@ -214,6 +297,7 @@ export default function DataEntryScreen() {
                     setFieldErrors(p => { const n = { ...p }; delete n[f.column_key]; return n })
                 }}
               />
+              </View>
             )
           })}
         </ScrollView>
@@ -236,7 +320,7 @@ export default function DataEntryScreen() {
         {/* Header */}
         <View style={{ backgroundColor: '#1e293b', padding: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>DataEntry Pro</Text>
-          <Text style={{ color: '#94a3b8', fontSize: 12 }}>Record #{data?.record.global_sequence}</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 12 }}>{data?.record.record_code}</Text>
         </View>
         {/* Column headers */}
         <View style={{ flexDirection: 'row', backgroundColor: '#1e3a5f' }}>
@@ -325,7 +409,7 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
               display={Platform.OS === 'android' ? 'calendar' : 'default'}
               onChange={(_, date) => {
                 onShowDatePicker()
-                if (date) onChange(date.toISOString().split('T')[0])
+                if (date) onChange(date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
               }}
             />
           )}
@@ -352,12 +436,17 @@ const s = StyleSheet.create({
   backBtn:          { paddingHorizontal: 4 },
   backText:         { color: '#2563eb', fontSize: 14, fontWeight: '500' },
   menuBtn:          { paddingHorizontal: 8 },
-  menuText:         { fontSize: 22, color: '#374151', fontWeight: 'bold' },
-  dropdown:         { position: 'absolute', top: 44, right: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 8, zIndex: 100, minWidth: 180 },
-  dropdownRecord:   { paddingHorizontal: 16, paddingVertical: 10, fontSize: 13, color: '#6b7280' },
-  dropdownDivider:  { height: 1, backgroundColor: '#e5e7eb' },
-  dropdownItem:     { paddingHorizontal: 16, paddingVertical: 12 },
-  dropdownItemText: { fontSize: 14, fontWeight: '500' },
+  menuText:         { fontSize: 20, color: '#374151', fontWeight: 'bold' },
+  sheetOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet:            { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  sheetHandle:      { width: 40, height: 4, backgroundColor: '#d1d5db', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  sheetTitle:       { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12 },
+  sheetCard:        { backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginBottom: 10 },
+  sheetLabel:       { fontSize: 10, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  sheetValue:       { fontSize: 15, fontWeight: '600', color: '#111827' },
+  sheetTimer:       { fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  logoutBtn:        { backgroundColor: '#fef2f2', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 4 },
+  logoutText:       { color: '#dc2626', fontWeight: '700', fontSize: 15 },
 
   // Reference panel
   refContainer:     { backgroundColor: '#f8faff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', maxHeight: 200 },
@@ -372,6 +461,8 @@ const s = StyleSheet.create({
 
   // Input section
   inputList:        { padding: 14, paddingBottom: 20 },
+  groupHeader:      { backgroundColor: '#e0e7ff', paddingHorizontal: 14, paddingVertical: 8, marginTop: 8, borderRadius: 6, alignItems: 'center' },
+  groupHeaderText:  { color: '#3730a3', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   enterDataHeader:  { backgroundColor: '#374151', paddingHorizontal: 16, paddingVertical: 8 },
   enterDataLabel:   { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
   fieldWrap:        { marginBottom: 14 },

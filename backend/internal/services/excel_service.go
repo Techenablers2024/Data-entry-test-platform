@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +21,18 @@ const (
 	maxRows       = 10000
 	optionsSheet  = "Options"
 )
+
+const recordCodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func generateRecordCode() string {
+	b := make([]byte, 6)
+	rand.Read(b)
+	code := make([]byte, 6)
+	for i, v := range b {
+		code[i] = recordCodeChars[int(v)%len(recordCodeChars)]
+	}
+	return "TQ-" + string(code)
+}
 
 type ExcelService struct {
 	db *gorm.DB
@@ -57,13 +70,14 @@ func (s *ExcelService) ParseAndStore(filename string, fileBytes []byte, uploaded
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sheet: %w", err)
 	}
-	if len(rows) < 3 {
-		return nil, errors.New("file must have at least 3 rows: labels (row 1), types (row 2), and one data row")
+	if len(rows) < 4 {
+		return nil, errors.New("file must have at least 4 rows: labels (row 1), types (row 2), groups (row 3), and one data row")
 	}
 
 	labelRow := rows[0]
 	typeRow  := rows[1]
-	dataRows := rows[2:]
+	groupRow := rows[2]
+	dataRows := rows[3:]
 
 	if len(labelRow) == 0 {
 		return nil, errors.New("row 1 (labels) is empty")
@@ -75,7 +89,7 @@ func (s *ExcelService) ParseAndStore(filename string, fileBytes []byte, uploaded
 		return nil, fmt.Errorf("too many data rows: max %d, got %d", maxRows, len(dataRows))
 	}
 
-	fieldConfigs, warnings, err := parseFieldConfigs(labelRow, typeRow, optionsMap)
+	fieldConfigs, warnings, err := parseFieldConfigs(labelRow, typeRow, groupRow, optionsMap)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +206,7 @@ func loadOptionsSheet(f *excelize.File) map[string][]string {
 	return result
 }
 
-func parseFieldConfigs(labelRow, typeRow []string, optionsMap map[string][]string) ([]*models.FieldConfig, []string, error) {
+func parseFieldConfigs(labelRow, typeRow, groupRow []string, optionsMap map[string][]string) ([]*models.FieldConfig, []string, error) {
 	var warnings []string
 	var configs []*models.FieldConfig
 
@@ -211,7 +225,12 @@ func parseFieldConfigs(labelRow, typeRow []string, optionsMap map[string][]strin
 			return nil, nil, fmt.Errorf("column %d (%q): type is missing in row 2", i+1, label)
 		}
 
-		fc, err := parseOneFieldConfig(label, rawType, i, optionsMap)
+		group := ""
+		if i < len(groupRow) {
+			group = strings.TrimSpace(groupRow[i])
+		}
+
+		fc, err := parseOneFieldConfig(label, rawType, group, i, optionsMap)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -220,11 +239,12 @@ func parseFieldConfigs(labelRow, typeRow []string, optionsMap map[string][]strin
 	return configs, warnings, nil
 }
 
-func parseOneFieldConfig(label, rawType string, index int, optionsMap map[string][]string) (*models.FieldConfig, error) {
+func parseOneFieldConfig(label, rawType, group string, index int, optionsMap map[string][]string) (*models.FieldConfig, error) {
 	fc := &models.FieldConfig{
 		ColumnKey: fmt.Sprintf("col_%d", index+1),
 		Label:     label,
 		SortOrder: index,
+		Group:     group,
 	}
 
 	lower := strings.ToLower(strings.TrimSpace(rawType))
@@ -330,7 +350,8 @@ func parseDataRows(dataRows [][]string, fieldConfigs []*models.FieldConfig) ([]*
 			continue
 		}
 		records = append(records, &models.DataRecord{
-			Values: datatypes.JSON(b),
+			Values:     datatypes.JSON(b),
+			RecordCode: generateRecordCode(),
 		})
 	}
 	return records, warnings

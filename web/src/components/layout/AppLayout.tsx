@@ -14,13 +14,14 @@ export function AppLayout() {
   }
 
   if (!user) return <Navigate to="/login" replace />
+  if (user.is_admin) return <Navigate to="/admin" replace />
   if (user.status === 'pending') return <Navigate to="/pending" replace />
   if (user.status === 'disabled') return <Navigate to="/login" replace />
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       <AppHeader />
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <Outlet />
       </main>
     </div>

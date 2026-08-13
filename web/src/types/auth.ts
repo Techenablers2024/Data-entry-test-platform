@@ -1,5 +1,6 @@
 export interface User {
   id: string
+  display_id: string
   name: string
   mobile: string
   email?: string

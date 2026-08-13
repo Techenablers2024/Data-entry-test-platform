@@ -37,7 +37,7 @@ export function RecordsPage() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ['admin-records'] })
   const enable  = useMutation({ mutationFn: (id: string) => enableRecord(id),  onSuccess: invalidate })
   const disable = useMutation({ mutationFn: (id: string) => disableRecord(id), onSuccess: invalidate })
-  const del     = useMutation({ mutationFn: (id: string) => deleteRecord(id),  onSuccess: invalidate })
+  const del     = useMutation({ mutationFn: (id: string) => deleteRecord(id),  onSuccess: invalidate, onError: (err: any) => alert(err.response?.data?.error ?? 'Failed to delete record.') })
 
   const handleView = async (id: string) => {
     setLoadingView(true)
@@ -91,7 +91,10 @@ export function RecordsPage() {
             <tbody className="divide-y divide-gray-100">
               {(records ?? []).map((r: any) => (
                 <tr key={r.id} className={`hover:bg-gray-50 ${r.status === 'disabled' ? 'opacity-50' : ''}`}>
-                  <td className="px-4 py-3 font-mono text-gray-500">{r.global_sequence ?? '—'}</td>
+                  <td className="px-4 py-3 font-mono text-gray-500">
+                    <div>#{r.global_sequence ?? '—'}</div>
+                    <div className="text-xs text-blue-600">{r.record_code ?? ''}</div>
+                  </td>
                   <td className="px-4 py-3 max-w-[160px]" title={batchMap[r.batch_id]?.full}>
                     <div className="text-xs font-semibold text-blue-700">{batchMap[r.batch_id]?.label ?? '—'}</div>
                     <div className="text-xs text-gray-400 truncate">{batchMap[r.batch_id]?.filename ?? ''}</div>
@@ -143,7 +146,7 @@ export function RecordsPage() {
                 <h2 className="text-base font-bold text-gray-900">Record Details</h2>
                 {viewRecord && (
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Sequence #{viewRecord.record.global_sequence} · {viewRecord.record.status}
+                    #{viewRecord.record.global_sequence} · <span className="text-blue-600 font-mono">{viewRecord.record.record_code}</span> · {viewRecord.record.status}
                     {batchMap[viewRecord.record.batch_id] && (
                       <> · <span className="text-blue-600">{batchMap[viewRecord.record.batch_id].full}</span></>
                     )}

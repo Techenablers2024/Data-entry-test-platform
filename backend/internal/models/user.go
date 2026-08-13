@@ -16,6 +16,7 @@ const (
 
 type User struct {
 	ID           uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	DisplayID    string     `gorm:"not null;default:''" json:"display_id"`
 	Name         string     `gorm:"not null" json:"name"`
 	Mobile       string     `gorm:"not null;uniqueIndex" json:"mobile"`
 	Email        *string    `json:"email,omitempty"`

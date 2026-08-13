@@ -17,3 +17,15 @@ func AdminOnly() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func NonAdminOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims, ok := c.MustGet(UserKey).(*utils.Claims)
+		if !ok || claims.IsAdmin {
+			utils.Forbidden(c, "Admins cannot perform data entry operations.")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

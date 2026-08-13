@@ -10,6 +10,8 @@ import { formatSeconds } from '../../lib/utils'
 import { useAuth } from '../../context/AuthContext'
 import { logout } from '../../api/auth'
 
+const MAX_DAILY = 8 * 60 * 60
+
 export default function SessionGateScreen() {
   const router = useRouter()
   const { user, clearAuth } = useAuth()
@@ -32,27 +34,37 @@ export default function SessionGateScreen() {
     refetchOnMount: true,
   })
 
-  // Live daily countdown
   useEffect(() => {
     if (summary?.remaining_daily_seconds === undefined) return
     setDailyRemaining(summary.remaining_daily_seconds)
     if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => {
-      setDailyRemaining(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
-    }, 1000)
+    // Only countdown if midnight is the binding constraint (< 8hrs remaining)
+    if (summary.remaining_daily_seconds < MAX_DAILY) {
+      timerRef.current = setInterval(() => {
+        setDailyRemaining(prev => (prev !== null && prev > 0 ? prev - 1 : 0))
+      }, 1000)
+    }
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [summary?.remaining_daily_seconds])
 
+  const dailyRemainingValue = dailyRemaining ?? summary?.remaining_daily_seconds ?? null
+
   const canStart = summary
-    ? summary.sessions_used < summary.sessions_allowed && (dailyRemaining ?? 0) > 0
+    ? summary.sessions_used < summary.sessions_allowed && (dailyRemainingValue ?? 0) > 0
     : false
 
   const handleStart = async () => {
     setStarting(true)
     try {
       const res = await startSession(getDeviceName())
-      setActiveSession(res.data.data)
-      router.push('/(app)/data-entry')
+      const sess = res.data.data
+      setActiveSession(sess)
+      const action = sess.elapsed_seconds > 0 ? 'resumed' : 'started'
+      Alert.alert(
+        `Session ${sess.session_number} of 2 ${action}!`,
+        'Taking you to the test…',
+        [{ text: 'OK', onPress: () => router.push('/(app)/data-entry') }]
+      )
     } catch (err: any) {
       Alert.alert('Cannot start session', err.response?.data?.error ?? 'Please try again.')
     } finally {
@@ -134,7 +146,13 @@ export default function SessionGateScreen() {
           </View>
         )}
 
-        <TouchableOpacity style={s.btn} onPress={() => router.push('/(app)/data-entry')}>
+        <TouchableOpacity style={s.btn} onPress={() => {
+          Alert.alert(
+            `Session ${activeSession.session_number} of 2 resumed!`,
+            'Taking you to the test…',
+            [{ text: 'OK', onPress: () => router.push('/(app)/data-entry') }]
+          )
+        }}>
           <Text style={s.btnText}>Continue Start Test →</Text>
         </TouchableOpacity>
       </ScrollView>

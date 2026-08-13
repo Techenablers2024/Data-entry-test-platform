@@ -9,11 +9,13 @@ export interface FieldConfig {
   is_reference: boolean
   dropdown_options?: string[]
   sort_order: number
+  group: string
 }
 
 export interface DataRecord {
   id: string
   global_sequence: number
+  record_code: string
   batch_id: string
   values: Record<string, string>
   status: 'active' | 'disabled'
