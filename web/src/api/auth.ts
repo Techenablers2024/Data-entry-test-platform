@@ -27,3 +27,10 @@ export const verifyOTP = (mobile: string, otp: string) =>
 
 export const resetPassword = (reset_token: string, new_password: string, confirm_password: string) =>
   apiClient.post('/auth/reset-password', { reset_token, new_password, confirm_password })
+
+export const updateMyBank = (data: {
+  account_holder_name: string
+  bank_name: string
+  account_number: string
+  ifsc_code: string
+}) => apiClient.patch<{ data: User }>('/auth/me/bank', data)

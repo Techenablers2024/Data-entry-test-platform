@@ -38,6 +38,10 @@ func RunMigrations(db *gorm.DB) {
 		"internal/db/migrations/004_add_group_to_field_configs.sql",
 		"internal/db/migrations/005_add_display_id_to_users.sql",
 		"internal/db/migrations/006_add_record_code.sql",
+		"internal/db/migrations/007_user_profile.sql",
+		"internal/db/migrations/008_user_display_id.sql",
+		"internal/db/migrations/009_user_bank.sql",
+		"internal/db/migrations/010_credential_validity.sql",
 	}
 	for _, path := range files {
 		sql, err := os.ReadFile(path)

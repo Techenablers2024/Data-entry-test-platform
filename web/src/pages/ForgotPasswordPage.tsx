@@ -88,7 +88,7 @@ export function ForgotPasswordPage() {
     <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-8">
         {/* Logo */}
-        <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">DE</div>
+        <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] tracking-tighter mx-auto mb-4">MMT</div>
         <h1 className="text-xl font-bold text-gray-900 text-center mb-1">Forgot Password</h1>
         <p className="text-sm text-gray-500 text-center mb-6">
           {step === 'mobile' && 'Enter your registered mobile number'}

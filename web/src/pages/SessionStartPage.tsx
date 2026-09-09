@@ -73,7 +73,7 @@ export function SessionStartPage() {
                        remainingSeconds <= 30 * 60 ? 'text-amber-600' : 'text-green-600'
 
     return (
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 flex flex-col overflow-y-auto p-4">
         {sessionMsg && (
           <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
             <div className="bg-white rounded-2xl shadow-xl px-10 py-8 text-center">
@@ -83,7 +83,7 @@ export function SessionStartPage() {
             </div>
           </div>
         )}
-        <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center m-auto">
           <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             Session {activeSession.session_number} of 2 — Active
@@ -165,7 +165,7 @@ export function SessionStartPage() {
 
   // ── Start new session view ───────────────────────────────────────────────
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
+    <div className="flex-1 flex flex-col overflow-y-auto p-4">
       {sessionMsg && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
           <div className="bg-white rounded-2xl shadow-xl px-10 py-8 text-center">
@@ -175,7 +175,7 @@ export function SessionStartPage() {
           </div>
         </div>
       )}
-      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8">
+      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 m-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Ready to start?</h1>
         {user?.display_id && (
           <p className="text-xs font-mono text-blue-600 mb-1">{user.display_id}</p>

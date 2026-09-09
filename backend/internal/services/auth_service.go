@@ -22,6 +22,14 @@ func NewAuthService(db *gorm.DB, jwtSecret string) *AuthService {
 	return &AuthService{db: db, jwtSecret: jwtSecret}
 }
 
+func (s *AuthService) nextDisplayID() (string, error) {
+	var seq int64
+	if err := s.db.Raw("SELECT nextval('user_display_id_seq')").Scan(&seq).Error; err != nil {
+		return "", fmt.Errorf("failed to generate display ID: %w", err)
+	}
+	return fmt.Sprintf("MMT%04d", seq), nil
+}
+
 type SignupInput struct {
 	Name            string  `json:"name" binding:"required"`
 	Mobile          string  `json:"mobile" binding:"required"`
@@ -67,10 +75,9 @@ func (s *AuthService) Signup(input SignupInput) (*models.User, error) {
 		return nil, err
 	}
 
-	now := time.Now()
-	last3 := input.Mobile
-	if len(last3) > 3 {
-		last3 = last3[len(last3)-3:]
+	displayID, err := s.nextDisplayID()
+	if err != nil {
+		return nil, err
 	}
 
 	user := &models.User{
@@ -79,7 +86,7 @@ func (s *AuthService) Signup(input SignupInput) (*models.User, error) {
 		Email:        input.Email,
 		PasswordHash: string(hash),
 		Status:       models.UserStatusPending,
-		DisplayID:    fmt.Sprintf("DEP-%s-%s", last3, now.Format("020106")),
+		DisplayID:    displayID,
 	}
 	if err := s.db.Create(user).Error; err != nil {
 		return nil, err
@@ -98,10 +105,9 @@ func (s *AuthService) CreateAdmin(name, mobile, password string, email *string) 
 		return nil, err
 	}
 
-	now := time.Now()
-	last3 := mobile
-	if len(last3) > 3 {
-		last3 = last3[len(last3)-3:]
+	displayID, err := s.nextDisplayID()
+	if err != nil {
+		return nil, err
 	}
 
 	user := &models.User{
@@ -111,7 +117,7 @@ func (s *AuthService) CreateAdmin(name, mobile, password string, email *string) 
 		PasswordHash: string(hash),
 		Status:       models.UserStatusActive,
 		IsAdmin:      true,
-		DisplayID:    fmt.Sprintf("DEP-%s-%s", last3, now.Format("020106")),
+		DisplayID:    displayID,
 	}
 	if err := s.db.Create(user).Error; err != nil {
 		return nil, err
@@ -151,6 +157,9 @@ func (s *AuthService) Login(input LoginInput) (*LoginResponse, error) {
 	if user.Status == models.UserStatusDisabled {
 		return nil, errors.New("Account has been disabled. Please contact admin.")
 	}
+	if user.CredentialValidUntil != nil && time.Now().After(user.CredentialValidUntil.Add(24*time.Hour)) {
+		return nil, errors.New("Credential has expired. Please contact your admin to extend validity.")
+	}
 
 	var activeSession models.UserSession
 	deviceConflict := false
@@ -188,6 +197,12 @@ func (s *AuthService) GetUserByID(id uuid.UUID) (*models.User, error) {
 	if err := s.db.First(&user, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
+	if user.ApprovedBy != nil {
+		var approver models.User
+		if err := s.db.Select("display_id").First(&approver, "id = ?", *user.ApprovedBy).Error; err == nil {
+			user.ApprovedByName = approver.DisplayID
+		}
+	}
 	return &user, nil
 }
 
@@ -201,4 +216,24 @@ func (s *AuthService) GetUserByMobile(mobile string) (*models.User, error) {
 
 func (s *AuthService) JWTSecret() string {
 	return s.jwtSecret
+}
+
+type BankInput struct {
+	AccountHolderName string `json:"account_holder_name"`
+	BankName          string `json:"bank_name"`
+	AccountNumber     string `json:"account_number"`
+	IfscCode          string `json:"ifsc_code"`
+}
+
+func (s *AuthService) UpdateBank(userID uuid.UUID, input BankInput) (*models.User, error) {
+	updates := map[string]any{
+		"account_holder_name": input.AccountHolderName,
+		"bank_name":           input.BankName,
+		"account_number":      input.AccountNumber,
+		"ifsc_code":           input.IfscCode,
+	}
+	if err := s.db.Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	return s.GetUserByID(userID)
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"dataentry-platform/backend/internal/models"
@@ -213,41 +214,62 @@ type SubmissionReport struct {
 }
 
 type UserReport struct {
-	UserID       uuid.UUID          `json:"user_id"`
-	UserName     string             `json:"user_name"`
-	TotalRecords int                `json:"total_records"`
-	AvgAccuracy  float64            `json:"avg_accuracy"`
-	Page         int                `json:"page"`
-	Limit        int                `json:"limit"`
-	TotalPages   int                `json:"total_pages"`
-	Submissions  []SubmissionReport `json:"submissions"`
+	UserID        uuid.UUID          `json:"user_id"`
+	UserName      string             `json:"user_name"`
+	TotalRecords  int                `json:"total_records"`
+	AvgAccuracy   float64            `json:"avg_accuracy"`
+	Page          int                `json:"page"`
+	Limit         int                `json:"limit"`
+	TotalPages    int                `json:"total_pages"`
+	Period        int                `json:"period"`
+	PeriodStart   string             `json:"period_start"`
+	PeriodEnd     string             `json:"period_end"`
+	Submissions   []SubmissionReport `json:"submissions"`
 }
 
-// GetUserReport returns paginated validation report for a user.
-func (s *DataService) GetUserReport(userID uuid.UUID, page, limit int) (*UserReport, error) {
+// GetUserReport returns paginated validation report for a user, optionally filtered by test period.
+// period=0 means no filter (all submissions).
+func (s *DataService) GetUserReport(userID uuid.UUID, page, limit, period int) (*UserReport, error) {
 	var user models.User
 	if err := s.db.First(&user, "id = ?", userID).Error; err != nil {
 		return nil, errors.New("User not found.")
 	}
 
+	// Compute period date range if requested
+	var periodStart, periodEnd time.Time
+	periodLabel := 0
+	periodStartStr, periodEndStr := "", ""
+	if period > 0 && user.ApprovedAt != nil {
+		const days = 40
+		approvedAt := user.ApprovedAt.Truncate(24 * time.Hour)
+		periodStart = approvedAt.AddDate(0, 0, (period-1)*days)
+		periodEnd   = approvedAt.AddDate(0, 0, period*days)
+		periodLabel = period
+		periodStartStr = periodStart.Format("2006-01-02")
+		periodEndStr   = periodEnd.AddDate(0, 0, -1).Format("2006-01-02")
+	}
+
+	baseQ := s.db.Model(&models.UserSubmission{}).Where("user_id = ?", userID)
+	if periodLabel > 0 {
+		baseQ = baseQ.Where("submitted_at >= ? AND submitted_at < ?", periodStart, periodEnd)
+	}
+
 	// Total count
 	var total int64
-	s.db.Model(&models.UserSubmission{}).Where("user_id = ?", userID).Count(&total)
+	baseQ.Count(&total)
 
-	// Overall accuracy across all submissions
+	// Overall accuracy
 	var avgAcc struct{ Avg float64 }
-	s.db.Model(&models.UserSubmission{}).
-		Select("COALESCE(AVG(accuracy), 0) as avg").
-		Where("user_id = ?", userID).
-		Scan(&avgAcc)
+	baseQ.Select("COALESCE(AVG(accuracy), 0) as avg").Scan(&avgAcc)
 
 	// Paginated submissions
 	offset := (page - 1) * limit
 	var submissions []models.UserSubmission
-	if err := s.db.Where("user_id = ?", userID).
-		Order("submitted_at ASC").
-		Limit(limit).Offset(offset).
-		Find(&submissions).Error; err != nil {
+	subQ := s.db.Where("user_id = ?", userID)
+	if periodLabel > 0 {
+		subQ = subQ.Where("submitted_at >= ? AND submitted_at < ?", periodStart, periodEnd)
+	}
+	if err := subQ.Order("submitted_at ASC").Limit(limit).Offset(offset).Find(&submissions).Error; err != nil {
 		return nil, err
 	}
 
@@ -297,6 +319,9 @@ func (s *DataService) GetUserReport(userID uuid.UUID, page, limit int) (*UserRep
 		Page:         page,
 		Limit:        limit,
 		TotalPages:   int((total + int64(limit) - 1) / int64(limit)),
+		Period:       periodLabel,
+		PeriodStart:  periodStartStr,
+		PeriodEnd:    periodEndStr,
 	}, nil
 }
 

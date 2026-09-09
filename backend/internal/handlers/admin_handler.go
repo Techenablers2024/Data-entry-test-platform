@@ -6,6 +6,7 @@ import (
 	"dataentry-platform/backend/internal/models"
 	"dataentry-platform/backend/internal/services"
 	"dataentry-platform/backend/internal/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -98,6 +99,7 @@ func (h *AdminHandler) setUserStatus(c *gin.Context, status models.UserStatus, i
 		approverID := claims.UserID
 		updates["approved_by"] = approverID
 		updates["approved_at"] = gorm.Expr("NOW()")
+		updates["credential_valid_until"] = gorm.Expr("(NOW() + INTERVAL '365 days')::DATE")
 	}
 
 	if err := db.Model(&models.User{}).Where("id = ?", targetID).Updates(updates).Error; err != nil {
@@ -158,6 +160,177 @@ func (h *AdminHandler) UserSessions(c *gin.Context) {
 		return
 	}
 	utils.OK(c, sessions)
+}
+
+func (h *AdminHandler) UpdateUser(c *gin.Context) {
+	targetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		utils.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var body struct {
+		DOB               *string `json:"dob"`
+		Pincode           *string `json:"pincode"`
+		State             *string `json:"state"`
+		District          *string `json:"district"`
+		Taluk             *string `json:"taluk"`
+		ReferenceName     *string `json:"reference_name"`
+		AccountHolderName *string `json:"account_holder_name"`
+		BankName          *string `json:"bank_name"`
+		AccountNumber     *string `json:"account_number"`
+		IfscCode          *string `json:"ifsc_code"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	updates := map[string]any{}
+	if body.DOB != nil {
+		if *body.DOB == "" {
+			updates["dob"] = nil
+		} else {
+			parsed, err := time.Parse("2006-01-02", *body.DOB)
+			if err != nil {
+				utils.BadRequest(c, "invalid dob format, expected YYYY-MM-DD")
+				return
+			}
+			updates["dob"] = parsed
+		}
+	}
+	if body.Pincode           != nil { updates["pincode"]              = *body.Pincode }
+	if body.State             != nil { updates["state"]                = *body.State }
+	if body.District          != nil { updates["district"]             = *body.District }
+	if body.Taluk             != nil { updates["taluk"]                = *body.Taluk }
+	if body.ReferenceName     != nil { updates["reference_name"]       = *body.ReferenceName }
+	if body.AccountHolderName != nil { updates["account_holder_name"]  = *body.AccountHolderName }
+	if body.BankName          != nil { updates["bank_name"]            = *body.BankName }
+	if body.AccountNumber     != nil { updates["account_number"]       = *body.AccountNumber }
+	if body.IfscCode          != nil { updates["ifsc_code"]            = *body.IfscCode }
+
+	if len(updates) == 0 {
+		utils.BadRequest(c, "no fields to update")
+		return
+	}
+
+	if err := h.db.Model(&models.User{}).Where("id = ? AND is_admin = false", targetID).
+		Updates(updates).Error; err != nil {
+		utils.InternalError(c, err.Error())
+		return
+	}
+
+	var updated models.User
+	h.db.First(&updated, "id = ?", targetID)
+	actorID := GetUserIDFromContext(c)
+	logger.Audit("user_profile_updated", "Profile updated for user "+targetID.String(), actorID.String())
+	utils.OK(c, updated)
+}
+
+func (h *AdminHandler) TestPeriods(c *gin.Context) {
+	targetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		utils.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var user models.User
+	if err := h.db.First(&user, "id = ?", targetID).Error; err != nil {
+		utils.NotFound(c, "user not found")
+		return
+	}
+	if user.ApprovedAt == nil {
+		utils.OK(c, gin.H{"data": []any{}, "current_period": 0})
+		return
+	}
+
+	type Period struct {
+		Period       int    `json:"period"`
+		Start        string `json:"start"`
+		End          string `json:"end"`
+		IsCurrent    bool   `json:"is_current"`
+		DaysRemaining int   `json:"days_remaining"`
+	}
+
+	const periodDays = 40
+	approvedAt := user.ApprovedAt.Truncate(24 * time.Hour)
+	today := time.Now().Truncate(24 * time.Hour)
+
+	daysSince := int(today.Sub(approvedAt).Hours() / 24)
+	currentPeriod := daysSince/periodDays + 1
+
+	var periods []Period
+	for p := 1; p <= currentPeriod; p++ {
+		start := approvedAt.AddDate(0, 0, (p-1)*periodDays)
+		end   := approvedAt.AddDate(0, 0, p*periodDays-1)
+		daysLeft := 0
+		if p == currentPeriod {
+			daysLeft = int(end.Sub(today).Hours()/24) + 1
+		}
+		periods = append(periods, Period{
+			Period:        p,
+			Start:         start.Format("2006-01-02"),
+			End:           end.Format("2006-01-02"),
+			IsCurrent:     p == currentPeriod,
+			DaysRemaining: daysLeft,
+		})
+	}
+
+	utils.OK(c, gin.H{"data": periods, "current_period": currentPeriod})
+}
+
+func (h *AdminHandler) ExtendValidity(c *gin.Context) {
+	targetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		utils.BadRequest(c, "invalid user id")
+		return
+	}
+
+	var body struct {
+		ExtendDays int    `json:"extend_days"` // relative to current expiry (or today if none)
+		ValidUntil string `json:"valid_until"`  // explicit YYYY-MM-DD date (overrides extend_days)
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	var user models.User
+	if err := h.db.First(&user, "id = ? AND is_admin = false", targetID).Error; err != nil {
+		utils.NotFound(c, "user not found")
+		return
+	}
+
+	var newDate time.Time
+	if body.ValidUntil != "" {
+		newDate, err = time.Parse("2006-01-02", body.ValidUntil)
+		if err != nil {
+			utils.BadRequest(c, "invalid valid_until format, expected YYYY-MM-DD")
+			return
+		}
+	} else if body.ExtendDays > 0 {
+		// Extend from current expiry (or today if no expiry set yet)
+		base := time.Now().Truncate(24 * time.Hour)
+		if user.CredentialValidUntil != nil && user.CredentialValidUntil.After(base) {
+			base = *user.CredentialValidUntil
+		}
+		newDate = base.AddDate(0, 0, body.ExtendDays)
+	} else {
+		utils.BadRequest(c, "provide extend_days or valid_until")
+		return
+	}
+
+	if err := h.db.Model(&models.User{}).Where("id = ?", targetID).
+		Update("credential_valid_until", newDate).Error; err != nil {
+		utils.InternalError(c, err.Error())
+		return
+	}
+
+	var updated models.User
+	h.db.First(&updated, "id = ?", targetID)
+	actorID := GetUserIDFromContext(c)
+	logger.Audit("validity_extended", "Validity extended for "+targetID.String()+" until "+newDate.Format("2006-01-02"), actorID.String())
+	utils.OK(c, updated)
 }
 
 // ── Batch management ─────────────────────────────────────────────────────────

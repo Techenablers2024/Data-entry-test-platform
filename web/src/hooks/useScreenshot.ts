@@ -64,7 +64,7 @@ function buildHtml(options: WatermarkOptions, now: string): string {
 <body>
   <!-- Header -->
   <div style="background:#1d4ed8;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
-    <div style="color:#fff;font-weight:700;font-size:15px">DataEntry Pro</div>
+    <div style="color:#fff;font-weight:700;font-size:15px">MMT Associate Software</div>
     <div style="color:#bfdbfe;font-size:12px">Record #${recordSeq}</div>
   </div>
 

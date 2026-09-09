@@ -1,5 +1,5 @@
 {
-  "name": "dataentry-pro",
+  "name": "mmt-associate-software",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -12,8 +12,8 @@
     "electron:build": "npm run build && electron-builder"
   },
   "build": {
-    "appId": "com.dataentry.pro",
-    "productName": "DataEntry Pro",
+    "appId": "com.mmt.associatesoftware",
+    "productName": "MMT Associate Software",
     "files": [
       "dist/**/*",
       "electron/**/*.cjs"

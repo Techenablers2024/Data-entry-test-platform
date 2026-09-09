@@ -35,7 +35,8 @@ func parsePage(c *gin.Context) (int, int) {
 func (h *ReportHandler) MyReport(c *gin.Context) {
 	claims := c.MustGet(middleware.UserKey).(*utils.Claims)
 	page, limit := parsePage(c)
-	report, err := h.dataSvc.GetUserReport(claims.UserID, page, limit)
+	period, _ := strconv.Atoi(c.DefaultQuery("period", "0"))
+	report, err := h.dataSvc.GetUserReport(claims.UserID, page, limit, period)
 	if err != nil {
 		utils.InternalError(c, err.Error())
 		return
@@ -51,7 +52,8 @@ func (h *ReportHandler) AdminUserReport(c *gin.Context) {
 		return
 	}
 	page, limit := parsePage(c)
-	report, err := h.dataSvc.GetUserReport(userID, page, limit)
+	period, _ := strconv.Atoi(c.DefaultQuery("period", "0"))
+	report, err := h.dataSvc.GetUserReport(userID, page, limit, period)
 	if err != nil {
 		utils.InternalError(c, err.Error())
 		return

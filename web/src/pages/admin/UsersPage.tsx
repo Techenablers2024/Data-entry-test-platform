@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { listUsers, approveUser, disableUser, enableUser, resetPassword } from '../../api/admin'
+import { listUsers, approveUser, disableUser, enableUser, resetPassword, updateUser, extendValidity } from '../../api/admin'
 import { ReceiptModal } from './ReceiptModal'
 import type { User } from '../../types/auth'
+import { X, Hash, Pencil, ShieldCheck } from 'lucide-react'
 
 export function UsersPage() {
   const qc = useQueryClient()
@@ -14,6 +15,16 @@ export function UsersPage() {
   const [newPassword, setNewPassword] = useState('')
   const [resetMsg, setResetMsg] = useState('')
   const [receiptUser, setReceiptUser] = useState<User | null>(null)
+  const [profileUser, setProfileUser] = useState<User | null>(null)
+  const [profileEditing, setProfileEditing] = useState(false)
+  const [profileForm, setProfileForm] = useState({
+    dob: '', pincode: '', state: '', district: '', taluk: '', reference_name: '',
+    account_holder_name: '', bank_name: '', account_number: '', ifsc_code: '',
+  })
+  const [profileError, setProfileError] = useState('')
+  const [extendingValidity, setExtendingValidity] = useState(false)
+  const [extendCustomDate, setExtendCustomDate] = useState('')
+  const [extendError, setExtendError] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', statusFilter],
@@ -45,6 +56,60 @@ export function UsersPage() {
       setResetMsg('Password reset!')
       setTimeout(() => setResetMsg(''), 3000)
     },
+  })
+
+  const openProfile = (u: User) => {
+    setProfileForm({
+      dob: u.dob ? u.dob.substring(0, 10) : '',
+      pincode: u.pincode ?? '',
+      state: u.state ?? '',
+      district: u.district ?? '',
+      taluk: u.taluk ?? '',
+      reference_name: u.reference_name ?? '',
+      account_holder_name: u.account_holder_name ?? '',
+      bank_name: u.bank_name ?? '',
+      account_number: u.account_number ?? '',
+      ifsc_code: u.ifsc_code ?? '',
+    })
+    setProfileEditing(false)
+    setProfileError('')
+    setProfileUser(u)
+  }
+
+  const updateProfile = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: typeof profileForm }) =>
+      updateUser(id, {
+        dob: data.dob || null,
+        pincode: data.pincode,
+        state: data.state,
+        district: data.district,
+        taluk: data.taluk,
+        reference_name: data.reference_name,
+        account_holder_name: data.account_holder_name,
+        bank_name: data.bank_name,
+        account_number: data.account_number,
+        ifsc_code: data.ifsc_code,
+      }),
+    onSuccess: (res) => {
+      setProfileUser(prev => prev ? { ...prev, ...res.data.data } : res.data.data)
+      setProfileEditing(false)
+      setProfileError('')
+      invalidate()
+    },
+    onError: () => setProfileError('Failed to save. Please try again.'),
+  })
+
+  const extendValidityMutation = useMutation({
+    mutationFn: ({ id, days, date }: { id: string; days?: number; date?: string }) =>
+      extendValidity(id, days ? { extend_days: days } : { valid_until: date }),
+    onSuccess: (res) => {
+      setProfileUser(prev => prev ? { ...prev, ...res.data.data } : res.data.data)
+      setExtendingValidity(false)
+      setExtendCustomDate('')
+      setExtendError('')
+      invalidate()
+    },
+    onError: () => setExtendError('Failed to extend validity. Please try again.'),
   })
 
   const statusBadge = (s: string) => {
@@ -139,6 +204,8 @@ export function UsersPage() {
                             className="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-lg hover:bg-indigo-200">📈 Report</button>
                           <button onClick={() => setReceiptUser(u)}
                             className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs rounded-lg hover:bg-purple-200">🧾 Receipt</button>
+                          <button onClick={() => openProfile(u)}
+                            className="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs rounded-lg hover:bg-violet-200">👤 Profile</button>
                         </>
                       )}
                     </div>
@@ -179,6 +246,194 @@ export function UsersPage() {
         </div>
       )}
       {receiptUser && <ReceiptModal user={receiptUser} onClose={() => setReceiptUser(null)} />}
+
+      {/* Profile modal */}
+      {profileUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => { if (!profileEditing) setProfileUser(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-violet-500 to-violet-700 px-6 py-5 relative">
+              <button onClick={() => setProfileUser(null)} className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-bold text-xl select-none">
+                  {getInitials(profileUser.name)}
+                </div>
+                <div>
+                  <h2 className="text-white text-lg font-bold leading-tight">{profileUser.name}</h2>
+                  <span className="inline-flex items-center gap-1 bg-white/20 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full mt-1">
+                    <Hash size={10} />{profileUser.display_id}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto flex-1">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500 mb-2">Member Details</p>
+                <div className="bg-gray-50 rounded-xl px-4 py-1">
+                  <PRow label="Member ID"     value={profileUser.display_id} />
+                  <PRow label="Name"          value={profileUser.name} />
+                  <PRow label="Mobile"        value={profileUser.mobile} />
+                  <PRow label="Email"         value={profileUser.email ?? '—'} />
+                  <PRow label="Date of Birth" value={
+                    profileEditing
+                      ? <input type="date" value={profileForm.dob}
+                          onChange={e => setProfileForm(f => ({ ...f, dob: e.target.value }))}
+                          className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-500" />
+                      : fmtDate(profileUser.dob)
+                  } />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-teal-500 mb-2">Address Details</p>
+                <div className="bg-gray-50 rounded-xl px-4 py-1">
+                  <PRow label="Pincode"  value={profileEditing ? <input value={profileForm.pincode}  onChange={e => setProfileForm(f => ({ ...f, pincode: e.target.value }))}  placeholder="Pincode"  className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-violet-500" /> : (profileUser.pincode || '—')} />
+                  <PRow label="State"    value={profileEditing ? <input value={profileForm.state}    onChange={e => setProfileForm(f => ({ ...f, state: e.target.value }))}    placeholder="State"    className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-violet-500" /> : (profileUser.state || '—')} />
+                  <PRow label="District" value={profileEditing ? <input value={profileForm.district} onChange={e => setProfileForm(f => ({ ...f, district: e.target.value }))} placeholder="District" className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-violet-500" /> : (profileUser.district || '—')} />
+                  <PRow label="Taluk"    value={profileEditing ? <input value={profileForm.taluk}    onChange={e => setProfileForm(f => ({ ...f, taluk: e.target.value }))}    placeholder="Taluk"    className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-violet-500" /> : (profileUser.taluk || '—')} />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Registration Details</p>
+                <div className="bg-gray-50 rounded-xl px-4 py-1">
+                  <PRow label="Reg Date"   value={fmtDate(profileUser.created_at)} />
+                  <PRow label="Reg Time"   value={fmtTime(profileUser.created_at)} />
+                  <PRow label="Reference"  value={profileEditing ? <input value={profileForm.reference_name} onChange={e => setProfileForm(f => ({ ...f, reference_name: e.target.value }))} placeholder="Reference name" className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-violet-500" /> : (profileUser.reference_name || '—')} />
+                  <PRow label="Admin ID"   value={profileUser.approved_by_name || '—'} />
+                  <PRow label="Reg Status" value={profileUser.status === 'active' ? 'Approved' : profileUser.status}
+                    badge={profileUser.status === 'active' ? 'green' : profileUser.status === 'pending' ? 'amber' : 'red'} />
+                  {(() => {
+                    const vd = profileUser.credential_valid_until
+                    if (!vd) return <PRow label="Valid Until" value="—" />
+                    const days = Math.floor((new Date(vd).getTime() - Date.now()) / 86400000)
+                    const badge: 'green' | 'amber' | 'red' = days < 0 ? 'red' : days <= 90 ? 'amber' : 'green'
+                    const label = days < 0 ? `Expired ${fmtDate(vd)}` : `${fmtDate(vd)} (${days}d left)`
+                    return <PRow label="Valid Until" value={label} badge={badge} />
+                  })()}
+                  <PRow label="Proc Days"  value="40" />
+                  <PRow label="Max"        value="2500" />
+                  <PRow label="Min"        value="2500" />
+                  <PRow label="Version"    value="1" />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-2">Bank Details</p>
+                <div className="bg-gray-50 rounded-xl px-4 py-1">
+                  <PRow label="Acct Name"  value={profileEditing ? <input value={profileForm.account_holder_name} onChange={e => setProfileForm(f => ({ ...f, account_holder_name: e.target.value }))} placeholder="Account holder name" className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500" /> : (profileUser.account_holder_name || '—')} />
+                  <PRow label="Bank Name"  value={profileEditing ? <input value={profileForm.bank_name}          onChange={e => setProfileForm(f => ({ ...f, bank_name: e.target.value }))}          placeholder="Bank name"           className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500" /> : (profileUser.bank_name || '—')} />
+                  <PRow label="Acct No"    value={profileEditing ? <input value={profileForm.account_number}     onChange={e => setProfileForm(f => ({ ...f, account_number: e.target.value }))}     placeholder="Account number"      className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500" /> : (profileUser.account_number || '—')} />
+                  <PRow label="IFSC"       value={profileEditing ? <input value={profileForm.ifsc_code}          onChange={e => setProfileForm(f => ({ ...f, ifsc_code: e.target.value.toUpperCase() }))} placeholder="IFSC code"        className="border border-gray-300 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500" /> : (profileUser.ifsc_code || '—')} />
+                </div>
+              </div>
+              {profileError && (
+                <div className="md:col-span-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                  <X size={13} className="text-red-500 shrink-0" />
+                  <p className="text-red-600 text-xs">{profileError}</p>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex flex-col gap-3">
+              {extendingValidity && (
+                <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 flex flex-col gap-2">
+                  <p className="text-xs font-semibold text-violet-700">Extend Credential Validity</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[{ label: '+6 months', days: 183 }, { label: '+1 year', days: 365 }, { label: '+2 years', days: 730 }].map(({ label, days }) => (
+                      <button key={days}
+                        onClick={() => extendValidityMutation.mutate({ id: profileUser.id, days })}
+                        disabled={extendValidityMutation.isPending}
+                        className="px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors">
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="date" value={extendCustomDate}
+                      onChange={e => setExtendCustomDate(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 flex-1" />
+                    <button
+                      onClick={() => extendCustomDate && extendValidityMutation.mutate({ id: profileUser.id, date: extendCustomDate })}
+                      disabled={!extendCustomDate || extendValidityMutation.isPending}
+                      className="px-3 py-1.5 text-xs font-semibold bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors">
+                      Set Date
+                    </button>
+                    <button onClick={() => { setExtendingValidity(false); setExtendCustomDate(''); setExtendError('') }}
+                      className="px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                  {extendError && <p className="text-xs text-red-500">{extendError}</p>}
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                {profileEditing ? (
+                  <>
+                    <button onClick={() => { setProfileEditing(false); setProfileError('') }}
+                      className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors">
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => updateProfile.mutate({ id: profileUser.id, data: profileForm })}
+                      disabled={updateProfile.isPending}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors">
+                      {updateProfile.isPending ? 'Saving…' : 'Save'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setProfileUser(null)}
+                      className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors">
+                      Close
+                    </button>
+                    <button onClick={() => { setExtendingValidity(v => !v); setExtendError('') }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-700 transition-colors">
+                      <ShieldCheck size={13} /> Extend Validity
+                    </button>
+                    <button onClick={() => setProfileEditing(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors">
+                      <Pencil size={13} /> Edit Profile
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function getInitials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('')
+}
+
+function fmtDate(iso: string | undefined) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+}
+
+function fmtTime(iso: string | undefined) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
+}
+
+function PRow({ label, value, badge }: {
+  label: string
+  value: React.ReactNode
+  badge?: 'green' | 'amber' | 'red'
+}) {
+  const badgeColors = { green: 'bg-green-100 text-green-700', amber: 'bg-amber-100 text-amber-700', red: 'bg-red-100 text-red-600' }
+  return (
+    <div className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 min-h-[34px]">
+      <span className="text-xs text-gray-400 w-24 shrink-0">{label}</span>
+      {badge ? (
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${badgeColors[badge]}`}>{value}</span>
+      ) : (
+        <span className="text-sm font-medium text-gray-800 flex-1 min-w-0">{value ?? '—'}</span>
+      )}
     </div>
   )
 }

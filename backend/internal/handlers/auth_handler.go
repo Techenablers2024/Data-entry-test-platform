@@ -67,6 +67,21 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	utils.OK(c, user)
 }
 
+func (h *AuthHandler) UpdateBank(c *gin.Context) {
+	claims := c.MustGet(middleware.UserKey).(*utils.Claims)
+	var input services.BankInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+	user, err := h.authService.UpdateBank(claims.UserID, input)
+	if err != nil {
+		utils.InternalError(c, err.Error())
+		return
+	}
+	utils.OK(c, user)
+}
+
 func (h *AuthHandler) Logout(c *gin.Context) {
 	claims := c.MustGet(middleware.UserKey).(*utils.Claims)
 	_ = claims

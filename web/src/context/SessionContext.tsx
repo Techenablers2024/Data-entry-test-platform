@@ -43,12 +43,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!activeSession) return
     const maxSecs = 4 * 60 * 60
     setRemainingSeconds(maxSecs - activeSession.elapsed_seconds)
+    refreshSummary()   // refresh as soon as a session becomes active
 
     // Server heartbeat every 60s
     intervalRef.current = setInterval(async () => {
       try {
         const res = await heartbeat(activeSession.id)
         setRemainingSeconds(res.data.data.remaining_seconds)
+        refreshSummary() // keep "Xm used today" in sync
       } catch {
         setActiveSessionState(null)
       }
@@ -63,7 +65,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       clearInterval(intervalRef.current!)
       clearInterval(tickRef.current!)
     }
-  }, [activeSession?.id])
+  }, [activeSession?.id, refreshSummary])
 
   const setActiveSession = (s: UserSession | null) => {
     setActiveSessionState(s)

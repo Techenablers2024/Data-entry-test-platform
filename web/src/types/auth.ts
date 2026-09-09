@@ -8,6 +8,21 @@ export interface User {
   is_admin: boolean
   created_at: string
   approved_at?: string
+  // Profile fields — populated by admin
+  dob?: string
+  pincode?: string
+  state?: string
+  district?: string
+  taluk?: string
+  reference_name?: string
+  approved_by_name?: string
+  // Bank details — set by member
+  account_holder_name?: string
+  bank_name?: string
+  account_number?: string
+  ifsc_code?: string
+  // Credential validity
+  credential_valid_until?: string
 }
 
 export interface LoginPayload {
