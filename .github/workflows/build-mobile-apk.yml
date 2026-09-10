@@ -48,7 +48,7 @@ jobs:
         working-directory: ./mobile
         run: |
           cat > .env << EOF
-          EXPO_PUBLIC_API_BASE_URL=http://34.47.253.223:8080/api/v1
+          EXPO_PUBLIC_API_BASE_URL=http://8.234.111.225:8080/api/v1
           EOF
 
       - name: Initialize EAS Project
