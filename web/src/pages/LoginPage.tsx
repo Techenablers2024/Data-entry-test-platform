@@ -61,7 +61,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 sm:p-8">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm tracking-tighter mx-auto mb-4">
             MMT
@@ -134,12 +134,6 @@ export function LoginPage() {
               className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
               {isLoading ? 'Signing in…' : 'Sign In'}
             </button>
-            <div className="text-center mt-3 hidden">
-              <button type="button" onClick={() => navigate('/forgot-password')}
-                className="text-sm text-blue-600 hover:underline">
-                Forgot Password?
-              </button>
-            </div>
           </form>
         )}
 

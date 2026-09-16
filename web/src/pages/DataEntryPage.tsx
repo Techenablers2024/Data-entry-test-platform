@@ -84,7 +84,7 @@ export function DataEntryPage() {
       const val = inputs[f.column_key] ?? ''
       if (!val.trim()) { errs[f.column_key] = 'This field is required'; continue }
       if (f.field_type === 'number' && isNaN(Number(val))) errs[f.column_key] = 'Must be a number'
-      if (f.field_type === 'date'   && isNaN(Date.parse(val))) errs[f.column_key] = 'Must be a valid date'
+      if (f.field_type === 'date'   && !/^\d{2}-\d{2}-\d{4}$/.test(val)) errs[f.column_key] = 'Must be a valid date (DD-MM-YYYY)'
     }
     setFieldErrors(errs)
     return Object.keys(errs).length === 0
@@ -121,7 +121,7 @@ export function DataEntryPage() {
   if (!activeSession) {
     return (
       <div className="flex-1 flex items-center justify-center flex-col gap-4 p-8">
-        <p className="text-gray-600 text-lg">No active session. Please start a session first.</p>
+        <p className="text-gray-600 text-lg">Session ended or transferred to another device.</p>
         <button onClick={() => navigate('/session')}
           className="bg-sky-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-sky-700">
           Go to Session Start
@@ -524,14 +524,20 @@ function InfoRow({ label, value, valueClass = 'text-gray-800' }: { label: string
 }
 
 function DatePartsInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className: string }) {
-  const parts = value ? value.split(' ') : []
-  const day   = parts[0] ?? ''
-  const month = parts[1] ?? ''
+  // value stored as DD-MM-YYYY to match Excel format
+  const parts = value ? value.split('-') : []
+  const day   = parts[0] ? String(parseInt(parts[0])) : ''
+  const month = parts[1] ? MONTHS[parseInt(parts[1]) - 1] ?? '' : ''
   const year  = parts[2] ?? ''
 
   const update = (d: string, m: string, y: string) => {
-    if (d && m && y) onChange(`${d} ${m} ${y}`)
-    else onChange('')
+    if (d && m && y) {
+      const dd = d.padStart(2, '0')
+      const mm = String(MONTHS.indexOf(m) + 1).padStart(2, '0')
+      onChange(`${dd}-${mm}-${y}`)
+    } else {
+      onChange('')
+    }
   }
 
   const sel = `${className} mr-1`

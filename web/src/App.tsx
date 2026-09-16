@@ -7,7 +7,6 @@ import { AdminLayout } from './pages/admin/AdminLayout'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { PendingApprovalPage } from './pages/PendingApprovalPage'
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { SessionStartPage } from './pages/SessionStartPage'
 import { DataEntryPage } from './pages/DataEntryPage'
 import { UsersPage } from './pages/admin/UsersPage'
@@ -33,7 +32,6 @@ export default function App() {
               <Route path="/login"          element={<LoginPage />} />
               <Route path="/signup"         element={<SignupPage />} />
               <Route path="/pending"        element={<PendingApprovalPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
               {/* Protected app */}
               <Route element={<AppLayout />}>

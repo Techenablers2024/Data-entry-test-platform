@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getTodaySummary, startSession } from '../api/sessions'
+import { getTodaySummary, startSession, getActiveSession, takeover } from '../api/sessions'
 import { getRecordProgress } from '../api/data'
 import { useSession } from '../context/SessionContext'
 import { useAuth } from '../context/AuthContext'
@@ -17,6 +17,8 @@ export function SessionStartPage() {
   const { deviceId, deviceName } = useDeviceFingerprint()
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState('')
+  const [conflictSession, setConflictSession] = useState<{ id: string; session_number: number; device_name?: string | null } | null>(null)
+  const [isTakingOver, setIsTakingOver] = useState(false)
   const [dailyRemaining, setDailyRemaining] = useState<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -48,6 +50,7 @@ export function SessionStartPage() {
   const handleStart = async () => {
     if (!deviceId) return
     setError('')
+    setConflictSession(null)
     setIsStarting(true)
     try {
       const res = await startSession(deviceName)
@@ -57,8 +60,36 @@ export function SessionStartPage() {
       setSessionMsg(`Session ${sess.session_number} of 2 ${action}!`)
       setTimeout(() => navigate('/data-entry'), 1500)
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to start session.')
+      const msg: string = err.response?.data?.error || ''
+      if (msg.toLowerCase().includes('different device')) {
+        try {
+          const activeRes = await getActiveSession()
+          setConflictSession(activeRes.data.data)
+        } catch {
+          setError(msg || 'Failed to start session.')
+        }
+      } else {
+        setError(msg || 'Failed to start session.')
+      }
       setIsStarting(false)
+    }
+  }
+
+  const handleTakeover = async () => {
+    if (!conflictSession) return
+    setIsTakingOver(true)
+    try {
+      await takeover(conflictSession.id)
+      const res = await startSession(deviceName)
+      const sess = res.data.data
+      setActiveSession(sess)
+      setSessionMsg(`Session ${sess.session_number} of 2 resumed!`)
+      setTimeout(() => navigate('/data-entry'), 1500)
+    } catch {
+      setError('Failed to switch device. Please try again.')
+      setConflictSession(null)
+    } finally {
+      setIsTakingOver(false)
     }
   }
 
@@ -238,7 +269,33 @@ export function SessionStartPage() {
           </div>
         )}
 
-        {!canStart && !isLoading && (
+        {conflictSession && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <p className="text-sm font-semibold text-amber-800 mb-1">⚠️ Session active on another device</p>
+            <p className="text-sm text-amber-700 mb-3">
+              Session {conflictSession.session_number} of 2 is running on{' '}
+              <span className="font-medium">"{conflictSession.device_name ?? 'another device'}"</span>.
+              Switch it to this device?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConflictSession(null)}
+                className="flex-1 py-2 rounded-lg border border-amber-300 text-amber-800 text-sm font-medium hover:bg-amber-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTakeover}
+                disabled={isTakingOver}
+                className="flex-[2] py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 transition-colors"
+              >
+                {isTakingOver ? 'Switching…' : 'Switch to this device'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!conflictSession && !canStart && !isLoading && (
           <div className="bg-gray-100 rounded-xl p-4 text-center text-gray-600 text-sm mb-4">
             {summary?.sessions_used === summary?.sessions_allowed
               ? '✅ You have used all your sessions for today. Come back tomorrow!'
@@ -246,7 +303,7 @@ export function SessionStartPage() {
           </div>
         )}
 
-        {canStart && summary && (
+        {!conflictSession && canStart && summary && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-800">
             <p className="font-semibold text-center mb-2">
               Starting Session {summary.sessions_used + 1} of {summary.sessions_allowed}
@@ -266,11 +323,13 @@ export function SessionStartPage() {
           </div>
         )}
 
-        <button onClick={handleStart}
-          disabled={!canStart || isStarting || !deviceId}
-          className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-base">
-          {isStarting ? 'Starting session…' : 'Start Session'}
-        </button>
+        {!conflictSession && (
+          <button onClick={handleStart}
+            disabled={!canStart || isStarting || !deviceId}
+            className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-base">
+            {isStarting ? 'Starting session…' : 'Start Session'}
+          </button>
+        )}
       </div>
     </div>
   )

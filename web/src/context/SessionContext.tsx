@@ -61,9 +61,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setRemainingSeconds((prev) => (prev > 0 ? prev - 1 : 0))
     }, 1000)
 
+    // Re-validate session when tab regains focus (detects takeover by another device)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        getActiveSession()
+          .then((r) => {
+            // If backend has no active session, or it belongs to a different device, clear it
+            if (!r.data.data) setActiveSessionState(null)
+          })
+          .catch(() => setActiveSessionState(null))
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       clearInterval(intervalRef.current!)
       clearInterval(tickRef.current!)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [activeSession?.id, refreshSummary])
 

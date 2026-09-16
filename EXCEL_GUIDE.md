@@ -28,7 +28,7 @@ Each column must have one of these types in Row 2:
 | `display` | Reference data shown to the user (read-only, they can see it but not type in it) | `display` |
 | `text` | User types free text | `text` |
 | `number` | User types a number only | `number` |
-| `date` | User picks a date | `date` |
+| `date` | User picks a date — **must be formatted as DD-MM-YYYY** (e.g. `02-12-1995`) | `date` |
 | `fixed` | Value is pre-filled automatically, user cannot change it | `fixed` |
 | `dropdown:A\|B\|C` | User picks from a list | `dropdown:Male\|Female\|Other` |
 
@@ -86,7 +86,9 @@ In the above example:
 - **MBI Code** → auto-filled from the data, locked
 - **Full Name** → user types it
 - **Gender** → user picks from Male / Female / Other
-- **Date of Birth** → user picks a date
+- **Date of Birth** → user picks a date — enter values like `02-12-1995` (DD-MM-YYYY)
+
+> ⚠️ **Date format:** Date columns must contain values in **DD-MM-YYYY** format (e.g. `02-12-1995`). Other formats such as `2 December 1995` or `12/02/1995` will not match and the answer will be marked incorrect.
 
 ---
 
@@ -113,6 +115,7 @@ In the above example:
 | Dropdown not working | Check spelling — `dropdown:Male\|Female` (pipe symbol `\|` between options) |
 | Rows being skipped | Check that the `display` column has a value in every data row |
 | "Unknown type" error | Check Row 2 — only use: `display`, `text`, `number`, `date`, `fixed`, `dropdown:...` |
+| Date answers marked wrong even though they look correct | Ensure date columns are in **DD-MM-YYYY** format (e.g. `02-12-1995`). Formats like `2 December 1995` or `12/02/1995` will not match. |
 
 ---
 
@@ -125,6 +128,7 @@ In the above example:
 - [ ] At least one column is `display`
 - [ ] At least one column is `text`, `number`, `date`, `fixed`, or `dropdown`
 - [ ] All data starts from Row 4
+- [ ] Date columns are formatted as **DD-MM-YYYY** (e.g. `02-12-1995`)
 
 ---
 

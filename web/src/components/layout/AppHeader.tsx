@@ -154,13 +154,13 @@ export function AppHeader() {
           <HeaderBtn label="Bank Details" icon={<Landmark size={15} />}  color="blue"   onClick={openBankModal} />
           <HeaderBtn label="Profile"      icon={<UserCircle size={15} />} color="violet" onClick={() => openModal('profile')} />
           <HeaderBtn label="Privacy"      icon={<ShieldCheck size={15} />} color="teal"  onClick={() => openModal('privacy')} />
-          <div className="w-px h-6 bg-gray-200 mx-1" />
+          <div className="w-px h-6 bg-gray-200 mx-0.5 sm:mx-1" />
           <button
             onClick={handleLogout}
-            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-all group"
+            className="flex flex-col items-center gap-0.5 px-2 sm:px-3 py-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-all group"
           >
             <LogOut size={15} className="group-hover:translate-x-0.5 transition-transform" />
-            <span className="text-[10px] font-semibold">Logout</span>
+            <span className="text-[10px] font-semibold hidden sm:block">Logout</span>
           </button>
         </div>
       </header>
@@ -176,8 +176,8 @@ export function AppHeader() {
 
       {/* ── Modals ── */}
       {modal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeModal}>
-          <div className={`bg-white rounded-2xl shadow-2xl w-full flex flex-col ${modal === 'profile' ? 'max-w-3xl' : modal === 'privacy' ? 'max-w-2xl' : 'max-w-md'} max-h-[90vh] overflow-hidden`} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4" onClick={closeModal}>
+          <div className={`bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full flex flex-col ${modal === 'profile' ? 'sm:max-w-3xl' : modal === 'privacy' ? 'sm:max-w-2xl' : 'sm:max-w-md'} max-h-[90vh] overflow-hidden`} onClick={e => e.stopPropagation()}>
 
             {/* ── Privacy modal ── */}
             {modal === 'privacy' && (
@@ -420,10 +420,10 @@ function HeaderBtn({ label, icon, color, onClick }: { label: string; icon: React
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-all group ${colorMap[color]}`}
+      className={`flex flex-col items-center gap-0.5 px-2 sm:px-3 py-1.5 rounded-lg transition-all group ${colorMap[color]}`}
     >
       <span className="group-hover:scale-110 transition-transform">{icon}</span>
-      <span className="text-[10px] font-semibold">{label}</span>
+      <span className="text-[10px] font-semibold hidden sm:block">{label}</span>
     </button>
   )
 }

@@ -11,11 +11,9 @@ export const logout = () => apiClient.post('/auth/logout')
 
 export const getMe = () => apiClient.get<{ data: User }>('/auth/me')
 
-export const forgotPassword = (mobile: string) =>
-  apiClient.post('/auth/forgot-password', { mobile })
-
-export const verifyOTP = (mobile: string, otp: string) =>
-  apiClient.post<{ data: { reset_token: string } }>('/auth/verify-otp', { mobile, otp })
-
-export const resetPassword = (reset_token: string, new_password: string, confirm_password: string) =>
-  apiClient.post('/auth/reset-password', { reset_token, new_password, confirm_password })
+export const updateMyBank = (data: {
+  account_holder_name: string
+  bank_name: string
+  account_number: string
+  ifsc_code: string
+}) => apiClient.patch<{ data: User }>('/auth/me/bank', data)

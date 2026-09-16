@@ -7,6 +7,7 @@ interface AuthContextValue {
   user: User | null
   isLoading: boolean
   setAuth: (token: string, user: User) => Promise<void>
+  updateUser: (user: User) => void
   clearAuth: () => Promise<void>
 }
 
@@ -35,13 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u)
   }
 
+  const updateUser = (u: User) => setUser(u)
+
   const clearAuth = async () => {
     await storage.removeToken()
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, setAuth, clearAuth }}>
+    <AuthContext.Provider value={{ user, isLoading, setAuth, updateUser, clearAuth }}>
       {children}
     </AuthContext.Provider>
   )

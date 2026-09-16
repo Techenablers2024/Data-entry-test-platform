@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  Alert, ActivityIndicator, StyleSheet, StatusBar, Platform, Modal,
+  Alert, ActivityIndicator, StyleSheet, Platform, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import ViewShot from 'react-native-view-shot'
@@ -16,6 +16,42 @@ import { logout } from '../../api/auth'
 import { takeScreenshot } from '../../hooks/useScreenshot'
 import { formatSeconds } from '../../lib/utils'
 import type { FieldConfig } from '../../types/data'
+
+// ── Shared helpers ───────────────────────────────────────────────────────────
+function fmtDate(iso: string | null | undefined) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+}
+function fmtDateTime(iso: string | null | undefined) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}  ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+function addDays(iso: string | null | undefined, days: number): string | null {
+  if (!iso) return null; const d = new Date(iso); d.setDate(d.getDate() + days); return d.toISOString()
+}
+function computeTestPeriod(approvedAt: string | null | undefined) {
+  if (!approvedAt) return null
+  const start = new Date(approvedAt); start.setHours(0,0,0,0)
+  const today = new Date(); today.setHours(0,0,0,0)
+  const daysSince = Math.floor((today.getTime() - start.getTime()) / 86400000)
+  const period = Math.floor(daysSince / 40) + 1
+  const pStart = new Date(start.getTime() + (period-1)*40*86400000)
+  const pEnd   = new Date(start.getTime() + period*40*86400000 - 86400000)
+  const daysRemaining = Math.max(0, Math.floor((pEnd.getTime() - today.getTime()) / 86400000) + 1)
+  const dayOfPeriod   = daysSince - (period-1)*40 + 1
+  return { period, pStart: pStart.toISOString(), pEnd: pEnd.toISOString(), daysRemaining, dayOfPeriod }
+}
+function sessionOrdinal(n: number) {
+  return n === 1 ? '1st' : n === 2 ? '2nd (Last)' : `${n}th`
+}
+function shiftEndTime(startedAt: string) {
+  const start = new Date(startedAt)
+  const fourHrs = new Date(start.getTime() + 4*60*60*1000)
+  const midnight = new Date(start); midnight.setDate(midnight.getDate()+1); midnight.setHours(0,0,0,0)
+  return new Date(Math.min(fourHrs.getTime(), midnight.getTime())).toISOString()
+}
 
 export default function DataEntryScreen() {
   const router = useRouter()
@@ -80,7 +116,7 @@ export default function DataEntryScreen() {
       const val = inputs[f.column_key] ?? ''
       if (!val.trim()) { errs[f.column_key] = 'Required'; continue }
       if (f.field_type === 'number' && isNaN(Number(val))) errs[f.column_key] = 'Must be a number.'
-      if (f.field_type === 'date' && isNaN(Date.parse(val))) errs[f.column_key] = 'Must be a valid date.'
+      if (f.field_type === 'date' && !/^\d{2}-\d{2}-\d{4}$/.test(val)) errs[f.column_key] = 'Must be a valid date (DD-MM-YYYY).'
     }
     setFieldErrors(errs)
     return Object.keys(errs).length === 0
@@ -153,10 +189,15 @@ export default function DataEntryScreen() {
   return (
     <SafeAreaView style={[s.safeArea, { paddingTop: statusBarHeight }]}>
 
+      {/* ── Brand strip ── */}
+      <View style={s.brandBar}>
+        <Text style={s.brandText}>MMT Associate Software</Text>
+      </View>
+
       {/* ── Top bar ── */}
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => router.replace('/(app)')} style={s.backBtn}>
-          <Text style={s.backText}>← Back</Text>
+          <Text style={s.backText}>🏠 Home</Text>
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
           <Text style={[{ fontSize: 13, fontWeight: '600' }, { color: timerColor }]}>
@@ -167,7 +208,7 @@ export default function DataEntryScreen() {
           </Text>
         </View>
         <TouchableOpacity onPress={() => setMenuOpen(v => !v)} style={s.menuBtn}>
-          <Text style={s.menuText}>☰</Text>
+          <Text style={s.menuText}>⋮</Text>
         </TouchableOpacity>
       </View>
 
@@ -177,56 +218,77 @@ export default function DataEntryScreen() {
         <View style={s.sheet}>
           <View style={s.sheetHandle} />
 
-          <Text style={s.sheetTitle}>My Progress</Text>
-
-          {/* Session */}
-          <View style={s.sheetCard}>
-            <Text style={s.sheetLabel}>Session</Text>
-            <Text style={s.sheetValue}>Session {activeSession?.session_number ?? '—'} of 2</Text>
-            <Text style={[s.sheetTimer, { color: timerColor }]}>{formatSeconds(remainingSeconds)}</Text>
-            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>remaining in session</Text>
-          </View>
-
-          {/* Record */}
-          <View style={s.sheetCard}>
-            <Text style={s.sheetLabel}>Current Record</Text>
-            <Text style={[s.sheetValue, { color: '#2563eb', fontSize: 18, fontFamily: 'monospace' }]}>{data?.record.record_code ?? '—'}</Text>
-          </View>
-
-          {/* Pages */}
-          {progress && (
-            <View style={s.sheetCard}>
-              <Text style={s.sheetLabel}>Pages</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>{progress.total}</Text>
-                  <Text style={{ fontSize: 11, color: '#6b7280' }}>Total</Text>
-                </View>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#16a34a' }}>{progress.completed}</Text>
-                  <Text style={{ fontSize: 11, color: '#6b7280' }}>Done</Text>
-                </View>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#2563eb' }}>{progress.pending}</Text>
-                  <Text style={{ fontSize: 11, color: '#6b7280' }}>Pending</Text>
-                </View>
-              </View>
-              {/* Progress bar */}
-              <View style={{ height: 6, backgroundColor: '#e5e7eb', borderRadius: 3, marginTop: 10, overflow: 'hidden' }}>
-                <View style={{ height: 6, backgroundColor: '#16a34a', borderRadius: 3,
-                  width: `${progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}%` as any }} />
-              </View>
+          {/* ── Session & Timer header ── */}
+          <View style={s.sheetSessionHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.sheetLabel}>Session {activeSession?.session_number ?? '—'} of 2  ·  {user?.name}</Text>
+              <Text style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', marginTop: 2 }}>{data?.record.record_code ?? '—'}</Text>
             </View>
-          )}
-
-          {/* User */}
-          <View style={s.sheetCard}>
-            <Text style={s.sheetLabel}>User</Text>
-            <Text style={s.sheetValue}>{user?.name ?? '—'}</Text>
-            <Text style={{ fontSize: 12, color: '#2563eb', fontFamily: 'monospace', marginTop: 2 }}>{user?.display_id ?? ''}</Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[s.sheetTimer, { color: timerColor }]}>{formatSeconds(remainingSeconds)}</Text>
+              <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>remaining</Text>
+            </View>
           </View>
 
-          {/* Logout */}
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+            {/* ── Project Details ── */}
+            {(() => {
+              const tp = computeTestPeriod(user?.approved_at)
+              const completed = progress?.completed ?? 0
+              const balance = Math.max(0, 2500 - completed)
+              return (
+                <View style={s.sheetSection}>
+                  <Text style={s.sheetSectionTitle}>Project Details</Text>
+                  <SheetRow label="Project No"   value="MMT_PRO001" />
+                  <SheetRow label="Test Session" value={tp ? `Test ${tp.period}` : '—'} valueColor="#0284c7" />
+                  <SheetRow label="Day"          value={tp ? `${tp.dayOfPeriod} / 40` : '—'} />
+                  <SheetRow label="Start Date"   value={fmtDate(tp ? tp.pStart : user?.approved_at)} />
+                  <SheetRow label="End Date"     value={fmtDate(tp ? tp.pEnd : addDays(user?.approved_at, 39))} />
+                  <SheetRow label="Days Left"    value={tp ? String(tp.daysRemaining) : '—'} last />
+                  <View style={{ flexDirection: 'row', marginTop: 8, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0' }}>
+                    {[
+                      { label: 'Total',   val: '2500',          color: '#374151' },
+                      { label: 'Minimum', val: '2500',          color: '#374151' },
+                      { label: 'Finish',  val: String(completed), color: '#16a34a' },
+                      { label: 'Balance', val: String(balance),  color: '#2563eb' },
+                    ].map((col, i, arr) => (
+                      <View key={col.label} style={{ flex: 1, alignItems: 'center', paddingVertical: 8,
+                        borderRightWidth: i < arr.length - 1 ? 1 : 0, borderRightColor: '#e2e8f0' }}>
+                        <Text style={{ fontSize: 10, color: '#9ca3af', marginBottom: 3 }}>{col.label}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: 'bold', color: col.color }}>{col.val}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )
+            })()}
+
+            {/* ── Shift Details ── */}
+            {activeSession && (() => {
+              const endIso = shiftEndTime(activeSession.started_at)
+              const vd = user?.credential_valid_until
+              const daysLeft = vd ? Math.floor((new Date(vd).getTime() - Date.now()) / 86400000) : null
+              const validityColor = daysLeft === null ? '#6b7280'
+                : daysLeft < 0 ? '#dc2626' : daysLeft <= 30 ? '#ef4444' : daysLeft <= 90 ? '#2563eb' : '#16a34a'
+              const validityLabel = daysLeft === null ? '—'
+                : daysLeft < 0 ? 'Expired' : `${daysLeft}d left`
+              return (
+                <View style={s.sheetSection}>
+                  <Text style={s.sheetSectionTitle}>Shift Details</Text>
+                  <SheetRow label="Session"  value={`${activeSession.session_number} of 2`} />
+                  <SheetRow label="Shift No" value={sessionOrdinal(activeSession.session_number)} />
+                  <SheetRow label="Start"    value={fmtDateTime(activeSession.started_at)} />
+                  <SheetRow label="End"      value={fmtDateTime(endIso)} />
+                  <SheetRow label="Status"   value="OPEN" valueColor="#16a34a" />
+                  {vd && <SheetRow label="Valid Until" value={fmtDate(vd)} />}
+                  {vd && <SheetRow label="Validity"    value={validityLabel} valueColor={validityColor} last />}
+                  {!vd && <SheetRow label="Status" value="OPEN" valueColor="#16a34a" last />}
+                </View>
+              )
+            })()}
+          </ScrollView>
+
+          {/* ── Logout ── */}
           <TouchableOpacity style={s.logoutBtn} onPress={() => {
             setMenuOpen(false)
             Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -238,7 +300,7 @@ export default function DataEntryScreen() {
               }},
             ])
           }}>
-            <Text style={s.logoutText}>🚪 Logout</Text>
+            <Text style={s.logoutText}>🚪  Logout</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -370,6 +432,18 @@ interface FieldInputProps {
   onChange: (val: string) => void
 }
 
+function SheetRow({ label, value, valueColor, last }: {
+  label: string; value: string; valueColor?: string; last?: boolean
+}) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9,
+      borderBottomWidth: last ? 0 : 1, borderBottomColor: '#f1f5f9' }}>
+      <Text style={{ fontSize: 13, color: '#6b7280' }}>{label}</Text>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: valueColor ?? '#111827' }}>{value}</Text>
+    </View>
+  )
+}
+
 function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onChange }: FieldInputProps) {
   const inputStyle = [s.textInput, error ? s.inputError : null]
 
@@ -390,7 +464,7 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
         />
       ) : field.field_type === 'dropdown' ? (
         <View style={[s.pickerWrapper, error ? s.inputError : null]}>
-          <Picker key={value} selectedValue={value} onValueChange={onChange} style={{ height: 48 }}>
+          <Picker key={value} selectedValue={value} onValueChange={onChange}>
             <Picker.Item label="Select…" value="" />
             {field.dropdown_options?.map(opt => <Picker.Item key={opt} label={opt} value={opt} />)}
           </Picker>
@@ -409,7 +483,11 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
               display={Platform.OS === 'android' ? 'calendar' : 'default'}
               onChange={(_, date) => {
                 onShowDatePicker()
-                if (date) onChange(date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
+                if (date) {
+                  const dd = String(date.getDate()).padStart(2, '0')
+                  const mm = String(date.getMonth() + 1).padStart(2, '0')
+                  onChange(`${dd}-${mm}-${date.getFullYear()}`)
+                }
               }}
             />
           )}
@@ -429,18 +507,23 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
 }
 
 const s = StyleSheet.create({
-  safeArea:         { flex: 1, backgroundColor: '#f3f4f6', position: 'relative' },
+  safeArea:         { flex: 1, backgroundColor: '#f9fafb', position: 'relative' },
+  brandBar:         { backgroundColor: '#1e293b', paddingVertical: 5, alignItems: 'center' },
+  brandText:        { color: '#94a3b8', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyText:        { color: '#6b7280', fontSize: 16, marginBottom: 16, textAlign: 'center' },
   topBar:           { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backBtn:          { paddingHorizontal: 4 },
-  backText:         { color: '#2563eb', fontSize: 14, fontWeight: '500' },
-  menuBtn:          { paddingHorizontal: 8 },
-  menuText:         { fontSize: 20, color: '#374151', fontWeight: 'bold' },
+  backBtn:          { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  backText:         { color: '#2563eb', fontSize: 14, fontWeight: '600' },
+  menuBtn:          { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
+  menuText:         { fontSize: 20, color: '#374151', fontWeight: 'bold', lineHeight: 22 },
   sheetOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet:            { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   sheetHandle:      { width: 40, height: 4, backgroundColor: '#d1d5db', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   sheetTitle:       { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12 },
+  sheetSessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 12 },
+  sheetSection:     { backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 10 },
+  sheetSectionTitle: { fontSize: 11, fontWeight: '700', color: '#0369a1', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   sheetCard:        { backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginBottom: 10 },
   sheetLabel:       { fontSize: 10, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
   sheetValue:       { fontSize: 15, fontWeight: '600', color: '#111827' },
@@ -450,7 +533,7 @@ const s = StyleSheet.create({
 
   // Reference panel
   refContainer:     { backgroundColor: '#f8faff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', maxHeight: 200 },
-  refHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#374151' },
+  refHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#1e293b' },
   refTitle:         { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
   refChevron:       { fontSize: 11, color: '#d1d5db' },
   refScroll:        { maxHeight: 150 },
@@ -461,14 +544,14 @@ const s = StyleSheet.create({
 
   // Input section
   inputList:        { padding: 14, paddingBottom: 20 },
-  groupHeader:      { backgroundColor: '#e0e7ff', paddingHorizontal: 14, paddingVertical: 8, marginTop: 8, borderRadius: 6, alignItems: 'center' },
-  groupHeaderText:  { color: '#3730a3', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  enterDataHeader:  { backgroundColor: '#374151', paddingHorizontal: 16, paddingVertical: 8 },
+  groupHeader:      { backgroundColor: '#dbeafe', paddingHorizontal: 14, paddingVertical: 8, marginTop: 8, borderRadius: 6, alignItems: 'center' },
+  groupHeaderText:  { color: '#1d4ed8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  enterDataHeader:  { backgroundColor: '#1e293b', paddingHorizontal: 16, paddingVertical: 8 },
   enterDataLabel:   { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
   fieldWrap:        { marginBottom: 14 },
   inputLabel:       { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 6 },
   textInput:        { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14, backgroundColor: '#fff' },
-  pickerWrapper:    { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, overflow: 'hidden', backgroundColor: '#fff' },
+  pickerWrapper:    { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, backgroundColor: '#fff' },
   inputError:       { borderColor: '#f87171', backgroundColor: '#fef2f2' },
   errorText:        { color: '#ef4444', fontSize: 12, marginTop: 4 },
 

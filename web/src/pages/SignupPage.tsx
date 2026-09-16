@@ -75,7 +75,7 @@ export function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 sm:p-8">
         <div className="text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm tracking-tighter mx-auto mb-4">
             MMT

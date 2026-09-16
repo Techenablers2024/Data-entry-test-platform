@@ -86,9 +86,17 @@ export default function LoginScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#eff6ff' }} contentContainerStyle={s.container}>
+      <View style={{ alignItems: 'center', marginBottom: 28 }}>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: '#1d4ed8', letterSpacing: 0.5 }}>
+          MMT Associate Software
+        </Text>
+        <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
+          Data Entry Platform
+        </Text>
+      </View>
       <View style={s.card}>
         {/* Logo */}
-        <View style={s.logo}><Text style={s.logoText}>DE</Text></View>
+        <View style={s.logo}><Text style={s.logoText}>M</Text></View>
         <Text style={s.title}>Welcome back</Text>
         <Text style={s.subtitle}>Sign in to continue</Text>
 
@@ -113,10 +121,6 @@ export default function LoginScreen() {
 
         <TouchableOpacity style={[s.btn, { marginTop: 8 }]} onPress={handleLogin} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Sign In</Text>}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={{ marginTop: 12 }}>
-          <Text style={{ textAlign: 'center', color: '#2563eb', fontSize: 14 }}>Forgot Password?</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.push('/(auth)/signup')} style={{ marginTop: 12 }}>
