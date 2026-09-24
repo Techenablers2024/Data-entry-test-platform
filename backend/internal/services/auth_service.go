@@ -161,6 +161,19 @@ func (s *AuthService) Login(input LoginInput) (*LoginResponse, error) {
 		return nil, errors.New("Credential has expired. Please contact your admin to extend validity.")
 	}
 
+	// Expire any sessions that started more than MaxSessionSeconds ago.
+	// ExpireStale() handles this in the background, but it may not have run
+	// (server restart, missed cycle), leaving stale "active" rows in the DB.
+	staleThreshold := time.Now().Add(-time.Duration(models.MaxSessionSeconds) * time.Second)
+	s.db.Model(&models.UserSession{}).
+		Where("user_id = ? AND status = ? AND started_at < ?",
+			user.ID, models.SessionStatusActive, staleThreshold).
+		Updates(map[string]any{
+			"status":          models.SessionStatusExpired,
+			"ended_at":        time.Now(),
+			"elapsed_seconds": models.MaxSessionSeconds,
+		})
+
 	var activeSession models.UserSession
 	deviceConflict := false
 	var activeSessionInfo *ActiveSessionInfo

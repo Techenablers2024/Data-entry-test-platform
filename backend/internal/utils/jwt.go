@@ -24,7 +24,7 @@ func GenerateToken(userID uuid.UUID, mobile string, isAdmin bool, deviceID strin
 		IsAdmin:  isAdmin,
 		DeviceID: deviceID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(8 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}

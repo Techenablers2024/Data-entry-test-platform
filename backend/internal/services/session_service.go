@@ -223,6 +223,7 @@ func (s *SessionService) Takeover(activeSessionID uuid.UUID, newDeviceID string,
 	if newDeviceName != nil {
 		updates["device_name"] = *newDeviceName
 	}
+	
 	return s.db.Model(&models.UserSession{}).
 		Where("id = ? AND status = ?", activeSessionID, models.SessionStatusActive).
 		Updates(updates).Error

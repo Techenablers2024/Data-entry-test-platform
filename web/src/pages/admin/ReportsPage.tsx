@@ -30,7 +30,7 @@ export function ReportsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-bold text-gray-900 mb-6">User Reports</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">User Reports</h1>
 
       {/* User selector */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
@@ -38,7 +38,7 @@ export function ReportsPage() {
         <select
           value={selectedUserId}
           onChange={e => { setSelectedUserId(e.target.value); setExpandedSub(null) }}
-          className="border border-gray-300 rounded-xl px-4 py-2.5 text-sm w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-xl px-4 py-2.5 text-sm w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
         >
           <option value="">-- Choose a user --</option>
           {(users ?? []).map(u => (
@@ -50,7 +50,7 @@ export function ReportsPage() {
       {/* Report */}
       {isLoading && (
         <div className="flex justify-center py-12">
-          <div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -99,7 +99,7 @@ export function ReportsPage() {
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
+                    <span className="w-9 h-9 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">
                       #{sub.sequence_number}
                     </span>
                     <div className="text-left">

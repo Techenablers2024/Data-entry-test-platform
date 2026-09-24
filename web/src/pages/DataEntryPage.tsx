@@ -23,13 +23,15 @@ export function DataEntryPage() {
     queryKey: ['next-record'],
     queryFn: () => getNextRecord().then((r) => r.data.data),
     retry: false,
-    staleTime: 0,       // always re-fetch fresh after submit
+    staleTime: Infinity,          // hold the record until explicit invalidation
     refetchOnMount: true,
+    refetchOnWindowFocus: false,  // never swap record just because window regained focus
   })
 
   const { data: progress } = useQuery({
     queryKey: ['record-progress'],
     queryFn: () => getRecordProgress().then((r) => r.data.data),
+    refetchOnWindowFocus: false,
   })
 
   // Track records completed at the start of the current session for Shift Qty
@@ -105,6 +107,7 @@ export function DataEntryPage() {
     try {
       await takeScreenshot({
         username:    user?.name ?? 'user',
+        displayId:   user?.display_id ?? '—',
         recordSeq:   data.record.record_code,
         record:      data.record,
         fieldConfig: data.field_config,
@@ -123,7 +126,7 @@ export function DataEntryPage() {
       <div className="flex-1 flex items-center justify-center flex-col gap-4 p-8">
         <p className="text-gray-600 text-lg">Session ended or transferred to another device.</p>
         <button onClick={() => navigate('/session')}
-          className="bg-sky-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-sky-700">
+          className="bg-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-teal-700">
           Go to Session Start
         </button>
       </div>
@@ -161,11 +164,11 @@ export function DataEntryPage() {
           {screenshotMsg && <span className="text-green-600 font-medium">{screenshotMsg}</span>}
           {submitSuccess  && <span className="text-green-600 font-medium">✅ Submitted!</span>}
           <button onClick={handleScreenshot}
-            className="flex items-center gap-1.5 px-4 py-2 border border-sky-300 text-sky-700 bg-sky-50 rounded-lg text-sm font-medium transition-all duration-150 hover:bg-sky-100 hover:border-sky-400 hover:shadow-sm active:scale-95">
+            className="flex items-center gap-1.5 px-4 py-2 border border-teal-300 text-teal-700 bg-teal-50 rounded-lg text-sm font-medium transition-all hover:bg-teal-100 active:scale-95">
             📷 Take Screenshot
           </button>
           <button onClick={handleSubmit} disabled={submitMutation.isPending}
-            className="flex items-center gap-1.5 px-5 py-2 bg-sky-600 text-white rounded-lg text-sm font-semibold transition-all duration-150 hover:bg-sky-700 hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100">
+            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-lg text-sm font-semibold transition-all shadow-md hover:from-teal-700 hover:to-teal-600 hover:shadow-lg hover:shadow-teal-500/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
             {submitMutation.isPending ? 'Submitting…' : 'Submit & Next'}
           </button>
         </div>
@@ -177,227 +180,231 @@ export function DataEntryPage() {
         </div>
       )}
 
-      {/* Sticky column headers */}
-      <div className="grid shrink-0 border-b border-slate-200" style={{ gridTemplateColumns: '20% 40% 40%' }}>
-        <div className="bg-sky-100 border-r border-sky-200 px-4 py-2.5 flex items-center">
-          <span className="text-sky-700 text-xs font-semibold uppercase tracking-wider border-l-2 border-sky-500 pl-2">
-            Overview
-          </span>
-        </div>
-        <div className="px-4 py-2.5 flex items-center border-r border-sky-200 bg-sky-100">
-          <span className="text-sky-700 text-xs font-semibold uppercase tracking-wider border-l-2 border-sky-500 pl-2">
-            Reference Data
-          </span>
-        </div>
-        <div className="px-4 py-2.5 flex items-center bg-sky-100">
-          <span className="text-sky-700 text-xs font-semibold uppercase tracking-wider border-l-2 border-sky-500 pl-2">
-            Enter Data
-          </span>
-        </div>
-      </div>
+      {/* Columns */}
+      <div className="flex-1 flex gap-2 p-2 overflow-hidden bg-slate-300">
 
-      {/* Rows */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* ── Left panel (20%) ── */}
-        <div className="shrink-0 bg-slate-50 border-r border-slate-200 overflow-y-auto h-full flex flex-col" style={{ width: '20%' }}>
+        {/* ── Overview (20%) ── */}
+        <div className="shrink-0 rounded-xl overflow-hidden shadow-lg border border-teal-400 flex flex-col" style={{ width: '20%' }}>
+          <div className="bg-gradient-to-r from-teal-800 to-teal-600 px-4 py-2.5 shrink-0 border-b-2 border-teal-500">
+            <span className="text-white text-sm font-bold uppercase tracking-wider">Overview</span>
+          </div>
+          <div className="flex-1 overflow-y-auto flex flex-col bg-teal-50/20">
 
-          {/* Section 1+2 — User Header + Current Record + Timer (unified gradient block) */}
-          <div className="bg-gradient-to-br from-sky-600 to-sky-800 px-4 pt-4 pb-3 flex flex-col items-center gap-2 shrink-0">
-            <div className="w-12 h-12 rounded-full bg-sky-400 ring-2 ring-sky-300/60 flex items-center justify-center text-white font-bold text-lg select-none">
-              {getInitials(user?.name)}
+          {/* User header */}
+          <div className="bg-gradient-to-br from-teal-700 to-teal-900 px-3 pt-3 pb-2 flex flex-col items-center gap-1.5 shrink-0">
+            <div className="flex items-center justify-center gap-2 w-full">
+              <div className="w-9 h-9 rounded-full bg-teal-400 ring-2 ring-teal-300/60 flex items-center justify-center text-white font-bold text-base select-none shrink-0">
+                {user?.name?.charAt(0).toUpperCase() ?? 'M'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-white font-bold text-sm leading-tight">{user?.display_id ?? '—'}</p>
+                <p className="text-teal-200 text-xs mt-0.5 truncate">{user?.name ?? '—'}</p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-white font-bold text-base leading-tight">{user?.display_id ?? '—'}</p>
-              <p className="text-sky-200 text-xs mt-0.5 truncate max-w-[140px]">{user?.name ?? '—'}</p>
-            </div>
-            {/* Current Record + Timer */}
-            <div className="w-full pt-2 border-t border-white/20 text-center">
-              <p className="text-xs font-semibold text-white/60 uppercase tracking-wide mb-1">Current Record</p>
-              <span className="inline-block bg-white/15 border border-white/20 text-white font-mono font-bold text-sm px-3 py-1.5 rounded-full mt-0.5">{data?.record.record_code ?? '—'}</span>
-              <p className={`text-2xl font-mono font-bold mt-2 ${
-                remainingSeconds <= 5*60 ? 'text-red-300' :
-                remainingSeconds <= 30*60 ? 'text-white' : 'text-green-300'
-              }`}>{formatSeconds(remainingSeconds)}</p>
-              <p className="text-xs text-white/50 mt-0.5 mb-2">remaining in session</p>
-              {(() => {
-                const SESSION_SECS = 4 * 60 * 60
-                const elapsed = SESSION_SECS - remainingSeconds
-                const pct = Math.min(100, (elapsed / SESSION_SECS) * 100)
-                const barColor = remainingSeconds <= 5*60 ? 'bg-red-300' : remainingSeconds <= 30*60 ? 'bg-white/80' : 'bg-green-300'
-                return (
-                  <div>
-                    <div className="flex justify-between text-[10px] text-white/50 mb-0.5">
-                      <span>Session time</span>
-                      <span>{Math.round(pct)}%</span>
-                    </div>
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-1000 ${barColor}`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                )
-              })()}
+            <div className="w-full pt-1.5 border-t border-white/20 text-center">
+              <span className="inline-block bg-teal-500/30 border border-teal-300/70 ring-1 ring-teal-300/40 shadow-sm text-white font-mono font-bold text-xs px-3 py-0.5 rounded-full">
+                {data.record.record_code}
+              </span>
             </div>
           </div>
 
-          {/* Section 3 — Project Details */}
-          <div className="shrink-0">
-            <div className="px-3 pt-3 pb-1 ml-1 border-l-2 border-sky-300">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-sky-500">Project Details</p>
+          {/* Project Details */}
+          <div className="shrink-0 px-3 pt-3 pb-2">
+            <div className="border border-teal-400 rounded overflow-hidden shadow-sm bg-white">
+            <div className="bg-teal-600 px-3 py-1.5">
+              <p className="text-xs font-bold uppercase tracking-widest text-white">Project Details</p>
             </div>
-            <div className="px-3 py-2 space-y-1.5 border-b border-gray-100">
+            <div className="px-3 py-1.5 space-y-1">
               {(() => {
                 const tp = computeTestPeriod(user?.approved_at)
                 return (
                   <>
-                    <InfoRow label="Project No"    value="MMT_PRO001" />
-                    <InfoRow label="Test Session"  value={tp ? `Test ${tp.period}` : '—'}
-                             valueClass="text-sky-600 font-bold" />
-                    <InfoRow label="Day"           value={tp ? `${tp.dayOfPeriod} / 40` : '—'} />
-                    <InfoRow label="Start Date"    value={tp ? formatDDMMYYYY(tp.pStart) : formatDDMMYYYY(user?.approved_at)} />
-                    <InfoRow label="End Date"      value={tp ? formatDDMMYYYY(tp.pEnd) : formatDDMMYYYY(addDays(user?.approved_at, 39))} />
-                    <InfoRow label="Days Left"     value={tp ? String(tp.daysRemaining) : '—'} />
-                    <InfoRow label="Status"        value="OPEN" valueClass="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full" />
+                    <InfoRow label="Project No"   value="MMT_PRO001" />
+                    <InfoRow label="Test Session" value={tp ? `Test ${tp.period}` : '—'} valueClass="text-black font-bold" />
+                    <InfoRow label="Day"          value={tp ? `${tp.dayOfPeriod} / 40` : '—'} />
+                    <InfoRow label="Start Date"   value={tp ? formatDDMMYYYY(tp.pStart) : formatDDMMYYYY(user?.approved_at)} />
+                    <InfoRow label="End Date"     value={tp ? formatDDMMYYYY(tp.pEnd) : formatDDMMYYYY(addDays(user?.approved_at, 39))} />
+                    <InfoRow label="Days Left"    value={tp ? String(tp.daysRemaining) : '—'} />
+                    <InfoRow label="Status"       value="OPEN" valueClass="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full" />
                   </>
                 )
               })()}
             </div>
-            {/* Total | Minimum | Finish | Balance table */}
-            <div className="mx-3 my-2 rounded-lg border border-slate-200 overflow-hidden bg-white">
-              <div className="grid grid-cols-4 text-center border-b border-slate-100">
-                {['Total','Minimum','Finish','Balance'].map(h => (
-                  <div key={h} className="border-r border-slate-100 last:border-r-0 px-1 py-1.5">
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{h}</p>
+
+            {/* Totals grid */}
+            <div className="mx-3 my-2 rounded-lg border border-teal-400 overflow-hidden bg-white">
+              <div className="grid grid-cols-4 text-center border-b border-teal-300">
+                {['Total','Min','Done','Left'].map(h => (
+                  <div key={h} className={`border-r border-teal-300 last:border-r-0 px-1 py-1.5 ${h === 'Done' ? 'bg-green-50' : h === 'Left' ? 'bg-teal-50' : ''}`}>
+                    <p className="text-xs font-bold uppercase tracking-wide text-black">{h}</p>
                   </div>
                 ))}
               </div>
               <div className="grid grid-cols-4 text-center">
                 {[
-                  { val: 2500,                              cls: 'text-slate-700' },
-                  { val: 2500,                              cls: 'text-slate-700' },
-                  { val: progress?.completed ?? 0,          cls: 'text-green-600' },
-                  { val: 2500 - (progress?.completed ?? 0), cls: 'text-sky-600' },
+                  { val: 2500,                              cls: 'text-black' },
+                  { val: 2500,                              cls: 'text-black' },
+                  { val: progress?.completed ?? 0,          cls: 'text-black' },
+                  { val: 2500 - (progress?.completed ?? 0), cls: 'text-black' },
                 ].map(({ val, cls }, i) => (
-                  <div key={i} className="border-r border-slate-100 last:border-r-0 px-1 py-2">
+                  <div key={i} className="border-r border-teal-300 last:border-r-0 px-1 py-2">
                     <p className={`text-sm font-bold ${cls}`}>{val}</p>
                   </div>
                 ))}
               </div>
             </div>
-            {/* Records progress bar */}
+
+            {/* Records progress */}
             {(() => {
-              const finished = progress?.completed ?? 0
-              const pct = Math.min(100, (finished / 2500) * 100)
+              const done = progress?.completed ?? 0
+              const pct  = Math.min(100, (done / 2500) * 100)
               return (
-                <div className="px-3 py-2 border-b border-gray-100">
-                  <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
-                    <span>Records progress</span>
-                    <span>{finished} / 2500</span>
+                <div className="px-3 py-2">
+                  <div className="flex justify-between text-xs text-gray-800 font-bold mb-0.5">
+                    <span>Records</span><span>{done} / 2500</span>
                   </div>
                   <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-full bg-teal-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               )
             })()}
-          </div>
-
-          {/* Section 4 — Shift Details */}
-          <div className="shrink-0">
-            <div className="px-3 pt-3 pb-1 ml-1 border-l-2 border-sky-300">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-sky-500">Shift Details</p>
-            </div>
-            <div className="px-3 py-2 space-y-1.5">
-              <InfoRow label="Session"    value={activeSession ? `${activeSession.session_number} of 2` : '—'} />
-              <InfoRow label="Project No" value={activeSession ? sessionOrdinal(activeSession.session_number) : '—'} />
-              <InfoRow label="Start Date" value={formatDDMMYYYYHHMMSS(activeSession?.started_at)} />
-              <InfoRow
-                label="End Date"
-                value={formatDDMMYYYYHHMMSS(
-                  activeSession?.started_at ? shiftEndTime(activeSession.started_at) : null
-                )}
-              />
-              <InfoRow label="Qty"    value={String(qty)} />
-              <InfoRow
-                label="Status"
-                value={activeSession?.status === 'active' ? 'OPEN' : 'CLOSED'}
-                valueClass={activeSession?.status === 'active' ? 'bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full' : 'bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full'}
-              />
-              {(() => {
-                const vd = user?.credential_valid_until
-                if (!vd) return null
-                const days = Math.floor((new Date(vd).getTime() - Date.now()) / 86400000)
-                const cls = days < 0 ? 'text-red-600 font-bold' : days <= 30 ? 'text-red-500 font-bold' : days <= 90 ? 'text-sky-600 font-semibold' : 'text-green-600 font-semibold'
-                const label = days < 0 ? 'Expired' : `${days}d left`
-                return (
-                  <>
-                    <InfoRow label="Valid Until" value={formatDDMMYYYY(vd)} />
-                    <InfoRow label="Validity"    value={label} valueClass={cls} />
-                  </>
-                )
-              })()}
             </div>
           </div>
 
+          {/* Shift Details in overview */}
+          <div className="shrink-0 px-3 pb-3">
+            <div className="border border-teal-400 rounded overflow-hidden shadow-sm bg-white">
+              <div className="bg-teal-600 text-white px-3 py-1.5 text-xs font-bold uppercase tracking-widest">Shift Details</div>
+              <div className="px-3 py-1.5 space-y-1">
+                <ShiftRow label="Project No"  value="MMT_PRO001" />
+                <ShiftRow label="Session"     value={activeSession ? sessionOrdinal(activeSession.session_number) : '—'} />
+                <ShiftRow label="From"        value={formatDDMMYYYYHHMM(activeSession?.started_at)} />
+                <ShiftRow label="To"          value={formatDDMMYYYYHHMM(activeSession?.started_at ? shiftEndTime(activeSession.started_at) : null)} />
+                <ShiftRow label="Quantity"    value={String(qty)} />
+                <ShiftRow label="Status"      value={activeSession?.status === 'active' ? 'OPEN' : 'CLOSED'} />
+              </div>
+              <div className={`text-center py-2 text-xl font-bold font-mono tracking-widest text-white select-none ${
+                remainingSeconds <= 5*60 ? 'bg-red-500 animate-pulse' : remainingSeconds <= 30*60 ? 'bg-amber-500' : 'bg-teal-700'
+              }`}>
+                {formatSeconds(remainingSeconds)}
+              </div>
+            </div>
+          </div>
+          </div>{/* end scroll wrapper */}
+
         </div>
 
-        {/* ── Reference Data (40%) ── */}
-        <div className="overflow-y-auto h-full border-r border-slate-200 bg-slate-50" style={{ width: '40%' }}>
-          {inputFields.map((inputField, idx) => {
-            const refField = referenceFields[idx]
-            const refValue = refField ? values[refField.column_key] : ''
-            const showGroupHeader = inputField.group && (idx === 0 || inputField.group !== inputFields[idx - 1].group)
-            return (
-              <div key={inputField.id}>
-                {showGroupHeader && (
-                  <div className="bg-slate-100 text-slate-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-center border-b border-slate-200">
-                    {inputField.group}
+        {/* ── Reference Data (32%) ── */}
+        <div className="shrink-0 rounded-xl overflow-hidden shadow-lg border border-teal-400 flex flex-col" style={{ width: '32%' }}>
+          <div className="bg-gradient-to-r from-teal-800 to-teal-600 px-4 py-2.5 shrink-0 border-b-2 border-teal-500">
+            <span className="text-white text-sm font-bold uppercase tracking-wider">Reference Data</span>
+          </div>
+
+          {/* Scrollable reference fields — flush, no outer padding */}
+          <div className="flex-1 overflow-y-auto bg-white">
+            {(() => {
+              const groups: { name: string; fields: typeof referenceFields }[] = []
+              for (const f of referenceFields) {
+                const g = f.group || 'General Information'
+                const last = groups[groups.length - 1]
+                if (last && last.name === g) last.fields.push(f)
+                else groups.push({ name: g, fields: [f] })
+              }
+              return groups.map((group, gi) => (
+                <div key={group.name}>
+                  <div className={`px-3 pt-1.5 pb-0 ${gi > 0 ? 'mt-1' : ''}`}>
+                    <span className="text-black font-extrabold text-sm uppercase tracking-wide">{group.name}</span>
                   </div>
-                )}
-                <div className={`flex items-baseline gap-1.5 px-3 py-1.5 border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
-                  <span className="text-xs font-medium text-slate-500 shrink-0 whitespace-nowrap">{refField?.label ?? ''}</span>
-                  <span className="text-slate-300 shrink-0">:</span>
-                  <span className="text-sm text-slate-800 font-medium break-all">{refValue || '—'}</span>
+                  {group.fields.map((f) => (
+                    <div key={f.column_key} className="px-3 py-0.5 bg-white text-[13px] leading-snug">
+                      <span className="text-black font-bold">{f.label}</span>
+                      <span className="text-black font-extrabold mx-1">:</span>
+                      <span className="text-black font-semibold">{values[f.column_key] || '—'}</span>
+                    </div>
+                  ))}
                 </div>
+              ))
+            })()}
+          </div>
+
+          {/* Shift Details — pinned at bottom */}
+          <div className="shrink-0 border-t-2 border-teal-500">
+            <div className="bg-teal-600 text-white px-3 py-1.5 text-xs font-bold uppercase tracking-widest">
+              Shift Details
+            </div>
+              <div className="px-3 py-1.5 space-y-1">
+                <ShiftRow label="Project No"  value="MMT_PRO001" />
+                <ShiftRow label="Session"     value={activeSession ? sessionOrdinal(activeSession.session_number) : '—'} />
+                <ShiftRow label="From"        value={formatDDMMYYYYHHMMSS(activeSession?.started_at)} />
+                <ShiftRow label="To"          value={formatDDMMYYYYHHMMSS(activeSession?.started_at ? shiftEndTime(activeSession.started_at) : null)} />
+                <ShiftRow label="Quantity"    value={String(qty)} />
+                <ShiftRow label="Status"      value={activeSession?.status === 'active' ? 'OPEN' : 'CLOSED'} />
               </div>
-            )
-          })}
+              <div className={`text-center py-2 text-2xl font-bold font-mono tracking-widest text-white select-none ${
+                remainingSeconds <= 5*60 ? 'bg-red-500 animate-pulse' : remainingSeconds <= 30*60 ? 'bg-amber-500' : 'bg-teal-700'
+              }`}>
+                {formatSeconds(remainingSeconds)}
+              </div>
+          </div>
+
         </div>
 
-        {/* ── Enter Data (40%) ── */}
-        <div className="overflow-y-auto h-full bg-white" style={{ width: '40%' }}>
-          {inputFields.map((inputField, idx) => {
-            const refField = referenceFields[idx]
-            const refValue = refField ? values[refField.column_key] : ''
-            const error = fieldErrors[inputField.column_key]
-            const showGroupHeader = inputField.group && (idx === 0 || inputField.group !== inputFields[idx - 1].group)
-            return (
-              <div key={inputField.id}>
-                {showGroupHeader && (
-                  <div className="bg-slate-100 text-slate-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-center border-b border-slate-200">
-                    {inputField.group}
+        {/* ── Enter Data (flex-1, takes remaining ~48%) ── */}
+        <div className="flex-1 rounded-xl overflow-hidden shadow-lg border border-teal-400 flex flex-col">
+          <div className="bg-gradient-to-r from-teal-800 to-teal-600 px-4 py-2.5 shrink-0 border-b-2 border-teal-500">
+            <span className="text-white text-sm font-bold uppercase tracking-wider">Enter Data</span>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-teal-50/40">
+            <div className="p-2 pb-4 flex flex-col gap-2">
+            {(() => {
+              const groups: { name: string; pairs: { field: typeof inputFields[0]; idx: number }[] }[] = []
+              inputFields.forEach((f, i) => {
+                const g = f.group || 'Data Entry'
+                const last = groups[groups.length - 1]
+                if (last && last.name === g) last.pairs.push({ field: f, idx: i })
+                else groups.push({ name: g, pairs: [{ field: f, idx: i }] })
+              })
+              return groups.map(group => (
+                <div key={group.name} className="border border-teal-400 rounded overflow-hidden shadow-sm bg-white">
+                  <div className="bg-teal-600 text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest">
+                    {group.name}
                   </div>
-                )}
-                <div
-                  data-field-error={error ? 'true' : undefined}
-                  className={`px-3 py-2 border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
-                  <label className="text-xs font-medium text-slate-500 mb-1 block">
-                    {inputField.label} <span className="text-red-400 font-bold">*</span>
-                  </label>
-                  <FieldInput
-                    key={`${data.record.id}-${inputField.column_key}`}
-                    field={inputField}
-                    value={inputField.field_type === 'fixed' ? refValue : (inputs[inputField.column_key] ?? '')}
-                    error={error}
-                    onChange={(val) => {
-                      setInputs(prev => ({ ...prev, [inputField.column_key]: val }))
-                      if (error) setFieldErrors(prev => { const n = { ...prev }; delete n[inputField.column_key]; return n })
-                    }}
-                  />
+                  {group.pairs.map(({ field: inputField, idx: globalIdx }, localIdx) => {
+                    const refField = referenceFields[globalIdx]
+                    const refValue = refField ? values[refField.column_key] : ''
+                    const error    = fieldErrors[inputField.column_key]
+                    return (
+                      <div
+                        key={inputField.id}
+                        data-field-error={error ? 'true' : undefined}
+                        className={`flex items-start gap-3 px-3 py-1 border-b border-gray-100 last:border-b-0 ${localIdx % 2 === 0 ? 'bg-white' : 'bg-teal-50/30'}`}>
+                        <label className="text-base font-semibold text-teal-700 shrink-0 w-40 text-left pt-0.5 leading-tight">
+                          {inputField.label}
+                          {inputField.field_type !== 'fixed' && <span className="text-red-400 ml-0.5">*</span>}
+                        </label>
+                        <div className="flex-1 min-w-0">
+                          <FieldInput
+                            key={`${data.record.id}-${inputField.column_key}`}
+                            field={inputField}
+                            value={inputField.field_type === 'fixed' ? refValue : (inputs[inputField.column_key] ?? '')}
+                            error={error}
+                            onChange={(val) => {
+                              setInputs(prev => ({ ...prev, [inputField.column_key]: val }))
+                              if (error) setFieldErrors(prev => { const n = { ...prev }; delete n[inputField.column_key]; return n })
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              ))
+            })()}
+            </div>{/* end p-3 content */}
+          </div>{/* end scroll wrapper */}
+        </div>{/* end enter data box */}
+
       </div>
     </div>
   )
@@ -411,10 +418,10 @@ interface FieldInputProps {
 }
 
 function FieldInput({ field, value, error, onChange }: FieldInputProps) {
-  const base = `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors ${
+  const base = `w-full border rounded-lg px-3 py-1.5 text-base font-medium focus:outline-none focus:ring-2 transition-colors ${
     error
       ? 'border-red-400 bg-red-50 focus:ring-red-400'
-      : 'border-sky-200 focus:ring-2 focus:ring-sky-400 focus:border-sky-400'
+      : 'border-teal-200 focus:ring-2 focus:ring-teal-400 focus:border-teal-400'
   }`
 
   const noPaste = {
@@ -428,7 +435,7 @@ function FieldInput({ field, value, error, onChange }: FieldInputProps) {
     <div>
       {field.field_type === 'fixed' ? (
         <input type="text" value={value} readOnly
-          className={`w-full border rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200`} />
+          className={`w-full border rounded-lg px-3 py-1.5 text-base bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200`} />
       ) : field.field_type === 'dropdown' ? (
         <select value={value} onChange={(e) => onChange(e.target.value)} className={base} {...noPaste}>
           <option value="">Select…</option>
@@ -456,10 +463,6 @@ const YEARS = Array.from({ length: CURRENT_YEAR - 1899 }, (_, i) => CURRENT_YEAR
 
 // ── Left panel helpers ──────────────────────────────────────────────────────
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?'
-  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join('')
-}
 
 function formatDDMMYYYY(iso: string | null | undefined): string {
   if (!iso) return '—'
@@ -472,6 +475,14 @@ function formatDDMMYYYYHHMMSS(iso: string | null | undefined): string {
   const d = new Date(iso)
   const date = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`
   const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
+  return `${date} ${time}`
+}
+
+function formatDDMMYYYYHHMM(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const date = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`
+  const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
   return `${date} ${time}`
 }
 
@@ -513,12 +524,22 @@ function shiftEndTime(startedAt: string): string {
   return new Date(Math.min(fourHrs.getTime(), midnight.getTime())).toISOString()
 }
 
-function InfoRow({ label, value, valueClass = 'text-gray-800' }: { label: string; value: string; valueClass?: string }) {
+function InfoRow({ label, value, valueClass = 'text-gray-900 font-bold' }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex items-baseline gap-1 min-w-0">
-      <span className="text-[11px] text-gray-400 shrink-0 w-20">{label}</span>
-      <span className="text-[11px] text-gray-300 shrink-0">:</span>
-      <span className={`text-xs font-semibold break-all ${valueClass}`}>{value}</span>
+      <span className="text-black font-extrabold shrink-0 w-20 text-xs">{label}</span>
+      <span className="text-black shrink-0 text-xs">:</span>
+      <span className={`text-sm font-bold break-words min-w-0 ${valueClass}`}>{value}</span>
+    </div>
+  )
+}
+
+function ShiftRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-1 min-w-0">
+      <span className="text-black font-extrabold shrink-0 w-20 text-xs">{label}</span>
+      <span className="text-black shrink-0 text-xs">:</span>
+      <span className="text-sm text-gray-900 font-extrabold break-words min-w-0">{value}</span>
     </div>
   )
 }

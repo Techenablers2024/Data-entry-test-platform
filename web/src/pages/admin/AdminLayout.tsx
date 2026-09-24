@@ -1,14 +1,17 @@
+import { useState } from 'react'
 import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { logout } from '../../api/auth'
 
 export function AdminLayout() {
   const { user, clearAuth } = useAuth()
   const navigate = useNavigate()
+  const [logoutConfirm, setLogoutConfirm] = useState(false)
+
   if (!user?.is_admin) return <Navigate to="/" replace />
 
   const handleLogout = async () => {
-    if (!window.confirm('Are you sure you want to logout?')) return
     try { await logout() } catch {}
     clearAuth()
     navigate('/login')
@@ -16,24 +19,32 @@ export function AdminLayout() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-      isActive ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+      isActive ? 'bg-teal-600 text-white' : 'text-gray-600 hover:bg-gray-100'
     }`
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-200 px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-[8px] tracking-tighter">MMT</div>
-          <span className="font-semibold text-gray-800">Admin Panel</span>
+      <header className="bg-teal-800 px-6 h-16 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="MMT" className="w-10 h-10 rounded-xl object-cover shadow-md ring-2 ring-white/20" />
+          <div className="flex flex-col leading-tight">
+            <span className="font-bold text-white text-base whitespace-nowrap">MMT Associate Software</span>
+            <span className="text-teal-300 text-xs font-semibold tracking-wide">Admin Panel</span>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">{user?.name}</span>
-          <button onClick={handleLogout} className="text-sm text-red-600 hover:underline">Logout</button>
+        <div className="flex items-center">
+          <button
+            onClick={() => setLogoutConfirm(true)}
+            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-red-300 hover:bg-red-900/40 hover:text-red-200 transition-all group"
+          >
+            <LogOut size={26} className="group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-xs font-extrabold">Logout</span>
+          </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
-        <aside className="w-56 bg-white border-r border-gray-200 p-4 flex flex-col gap-1">
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="w-56 bg-white border-r border-gray-200 p-4 flex flex-col gap-1 shrink-0">
           <NavLink to="/admin/users"   className={linkClass}>👥 Users</NavLink>
           <NavLink to="/admin/admins"  className={linkClass}>🛡️ Admins</NavLink>
           <NavLink to="/admin/batches" className={linkClass}>📊 Data Upload</NavLink>
@@ -43,6 +54,25 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      {logoutConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-xs w-full text-center">
+            <p className="text-gray-800 font-semibold mb-1">Log out?</p>
+            <p className="text-sm text-gray-500 mb-5">You'll need to sign in again to access the admin panel.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setLogoutConfirm(false)}
+                className="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleLogout}
+                className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-red-700 transition-colors">
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

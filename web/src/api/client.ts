@@ -8,10 +8,10 @@ export const apiClient = axios.create({
 
 // Attach JWT and device ID to every request
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
 
-  const deviceId = localStorage.getItem('device_id')
+  const deviceId = localStorage.getItem('device_id')  // device_id stays in localStorage (identifies the machine)
   if (deviceId) config.headers['X-Device-ID'] = deviceId
 
   return config
@@ -23,7 +23,7 @@ apiClient.interceptors.response.use(
   (err) => {
     const isLoginCall = err.config?.url?.includes('/auth/login')
     if (err.response?.status === 401 && !isLoginCall) {
-      localStorage.removeItem('token')
+      sessionStorage.removeItem('token')
       window.location.href = '/login'
     }
     return Promise.reject(err)

@@ -106,11 +106,13 @@ export function SessionStartPage() {
     return (
       <div className="flex-1 flex flex-col overflow-y-auto p-4">
         {sessionMsg && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
-            <div className="bg-white rounded-2xl shadow-xl px-10 py-8 text-center">
-              <div className="text-4xl mb-3">▶️</div>
-              <p className="text-xl font-bold text-gray-900">{sessionMsg}</p>
-              <p className="text-sm text-gray-500 mt-1">Taking you to the test…</p>
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40">
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-72 text-center">
+              <div className="bg-gradient-to-r from-teal-700 to-teal-500 px-10 py-6">
+                <div className="text-4xl mb-2">▶️</div>
+                <p className="text-lg font-bold text-white">{sessionMsg}</p>
+              </div>
+              <p className="text-sm text-teal-600 font-medium py-3">Taking you to the test…</p>
             </div>
           </div>
         )}
@@ -120,34 +122,43 @@ export function SessionStartPage() {
             Session {activeSession.session_number} of 2 — Active
           </div>
 
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Time remaining in session</p>
-          <p className={`text-5xl font-bold font-mono mb-6 ${timerColor}`}>
+          <p className="text-base font-extrabold text-gray-900 uppercase tracking-widest mb-1 flex items-center gap-1">
+            Time remaining in session
+            <span className="relative group cursor-help">
+              <span className="w-4 h-4 rounded-full bg-teal-100 text-teal-600 text-[10px] font-bold inline-flex items-center justify-center leading-none select-none normal-case tracking-normal">i</span>
+              <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-900 text-white text-xs rounded-xl px-3 py-2.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed shadow-lg normal-case tracking-normal">
+                How much time is left in your current session.<br /><br />
+                Each session has a maximum of 4 hours. The timer counts down from when you started. When it reaches zero, the session ends automatically.
+              </span>
+            </span>
+          </p>
+          <p className={`text-6xl font-bold font-mono mb-6 ${timerColor}`}>
             {formatSeconds(remainingSeconds)}
           </p>
 
-          <div className="bg-gray-50 rounded-xl p-4 mb-6 text-sm space-y-2.5">
+          <div className="bg-gray-50 rounded-xl p-4 mb-6 text-base space-y-2.5">
             <div className="flex justify-between">
-              <span className="text-gray-500">Session started</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-black font-extrabold">Session started</span>
+              <span className="font-extrabold text-black">
                 {new Date(activeSession.started_at).toLocaleTimeString('en-IN', {
                   timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit',
                 })}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Session number</span>
-              <span className="font-medium text-gray-900">{activeSession.session_number} / 2</span>
+              <span className="text-black font-extrabold">Session number</span>
+              <span className="font-extrabold text-black">{activeSession.session_number} / 2</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Device</span>
-              <span className="font-medium text-gray-900 truncate max-w-[180px]">
+              <span className="text-black font-extrabold">Device</span>
+              <span className="font-extrabold text-black truncate max-w-[180px]">
                 {activeSession.device_name ?? 'This device'}
               </span>
             </div>
             {dailyRemaining !== null && (
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span className="text-gray-500">Daily time remaining</span>
-                <span className={`font-medium font-mono ${dailyRemaining < 3600 ? 'text-amber-600' : 'text-gray-900'}`}>
+                <span className="text-black font-extrabold">Daily time remaining</span>
+                <span className={`font-extrabold font-mono ${dailyRemaining < 3600 ? 'text-amber-600' : 'text-black'}`}>
                   {formatSeconds(dailyRemaining)}
                 </span>
               </div>
@@ -155,19 +166,19 @@ export function SessionStartPage() {
           </div>
 
           {progress && (
-            <div className="bg-gray-50 rounded-xl p-4 mb-4 text-sm space-y-2.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Your Progress</p>
+            <div className="bg-gray-50 rounded-xl p-4 mb-4 text-base space-y-2.5">
+              <p className="text-base font-extrabold text-black uppercase tracking-wider mb-1">Your Progress</p>
               <div className="flex justify-between">
-                <span className="text-gray-500">Total pages</span>
-                <span className="font-medium text-gray-900">{progress.total}</span>
+                <span className="text-black font-extrabold">Total pages</span>
+                <span className="font-extrabold text-black">{progress.total}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Completed</span>
-                <span className="font-medium text-green-600">{progress.completed}</span>
+                <span className="text-black font-extrabold">Completed</span>
+                <span className="font-extrabold text-green-600">{progress.completed}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span className="text-gray-500">Pending</span>
-                <span className="font-medium text-blue-600">{progress.pending}</span>
+                <span className="text-black font-extrabold">Pending</span>
+                <span className="font-extrabold text-teal-600">{progress.pending}</span>
               </div>
             </div>
           )}
@@ -186,8 +197,8 @@ export function SessionStartPage() {
               setSessionMsg(`Session ${activeSession.session_number} of 2 resumed!`)
               setTimeout(() => navigate('/data-entry'), 1500)
             }}
-            className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 transition-all text-base">
-            Continue Start Test →
+            className="w-full bg-teal-600 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-700 active:scale-95 transition-all text-base">
+            Continue to MMT Form Filling
           </button>
         </div>
       </div>
@@ -198,62 +209,75 @@ export function SessionStartPage() {
   return (
     <div className="flex-1 flex flex-col overflow-y-auto p-4">
       {sessionMsg && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30">
-          <div className="bg-white rounded-2xl shadow-xl px-10 py-8 text-center">
-            <div className="text-4xl mb-3">🚀</div>
-            <p className="text-xl font-bold text-gray-900">{sessionMsg}</p>
-            <p className="text-sm text-gray-500 mt-1">Taking you to the test…</p>
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-72 text-center">
+            <div className="bg-gradient-to-r from-teal-700 to-teal-500 px-10 py-6">
+              <div className="text-4xl mb-2">🚀</div>
+              <p className="text-lg font-bold text-white">{sessionMsg}</p>
+            </div>
+            <p className="text-sm text-teal-600 font-medium py-3">Taking you to the test…</p>
           </div>
         </div>
       )}
       <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 m-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Ready to start?</h1>
         {user?.display_id && (
-          <p className="text-xs font-mono text-blue-600 mb-1">{user.display_id}</p>
+          <p className="text-xs font-mono text-teal-600 mb-1">{user.display_id}</p>
         )}
-        <p className="text-gray-500 text-sm mb-6">Review your session availability below before starting.</p>
+        <p className="text-gray-500 text-sm font-semibold mb-6">Review your session availability below before starting.</p>
 
         {progress && (
           <div className="bg-gray-50 rounded-xl p-5 mb-4 space-y-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Your Progress</p>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Total pages</span>
-              <span className="font-semibold text-gray-900">{progress.total}</span>
+            <p className="text-base font-extrabold text-black uppercase tracking-wider mb-1">Your Progress</p>
+            <div className="flex justify-between text-base">
+              <span className="text-black font-extrabold">Total pages</span>
+              <span className="font-extrabold text-black">{progress.total}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Completed</span>
-              <span className="font-semibold text-green-600">{progress.completed}</span>
+            <div className="flex justify-between text-base">
+              <span className="text-black font-extrabold">Completed</span>
+              <span className="font-extrabold text-green-600">{progress.completed}</span>
             </div>
-            <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-              <span className="text-gray-600">Pending</span>
-              <span className="font-semibold text-blue-600">{progress.pending}</span>
+            <div className="flex justify-between text-base pt-2 border-t border-gray-200">
+              <span className="text-black font-extrabold">Pending</span>
+              <span className="font-extrabold text-teal-600">{progress.pending}</span>
             </div>
           </div>
         )}
 
         {isLoading ? (
           <div className="h-32 flex items-center justify-center">
-            <div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-7 h-7 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : summary ? (
           <div className="bg-gray-50 rounded-xl p-5 mb-6 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Sessions used today</span>
-              <span className="font-semibold text-gray-900">{summary.sessions_used} / {summary.sessions_allowed}</span>
+            <div className="flex justify-between text-base">
+              <span className="text-black font-extrabold">Sessions used today</span>
+              <span className="font-extrabold text-black">{summary.sessions_used} / {summary.sessions_allowed}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Time used today</span>
-              <span className="font-semibold text-gray-900">{formatSeconds(summary.total_elapsed_seconds)}</span>
+            <div className="flex justify-between text-base">
+              <span className="text-black font-extrabold">Time used today</span>
+              <span className="font-extrabold text-black">{formatSeconds(summary.total_elapsed_seconds)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Time remaining today</span>
-              <span className={`font-semibold font-mono ${(dailyRemaining ?? 0) < 3600 ? 'text-amber-600' : 'text-green-600'}`}>
+            <div className="flex justify-between text-base">
+              <span className="text-black font-extrabold flex items-center gap-1">
+                Time remaining today
+                <span className="relative group cursor-help">
+                  <span className="w-4 h-4 rounded-full bg-teal-100 text-teal-600 text-[10px] font-bold inline-flex items-center justify-center leading-none select-none">i</span>
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-900 text-white text-xs rounded-xl px-3 py-2.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed shadow-lg">
+                    The smaller of two limits:<br />
+                    • Your unused daily quota (8 h − time used today)<br />
+                    • Time until midnight IST, when your day resets<br /><br />
+                    <span className="text-gray-400">e.g. At 8:30 PM with no work done, only ~3.5 h remain — not the full 8 h.</span>
+                  </span>
+                </span>
+              </span>
+              <span className={`font-extrabold font-mono ${(dailyRemaining ?? 0) < 3600 ? 'text-amber-600' : 'text-green-600'}`}>
                 {formatSeconds(dailyRemaining ?? 0)}
               </span>
             </div>
-            <div className="pt-2 border-t border-gray-200 flex justify-between text-sm">
-              <span className="text-gray-600">This session (max)</span>
-              <span className="font-semibold text-gray-900">4 hours</span>
+            <div className="pt-2 border-t border-gray-200 flex justify-between text-base">
+              <span className="text-black font-extrabold">This session (max)</span>
+              <span className="font-extrabold text-black">4 hours</span>
             </div>
             {(dailyRemaining ?? 0) < 4 * 3600 && (dailyRemaining ?? 0) > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
@@ -296,7 +320,7 @@ export function SessionStartPage() {
         )}
 
         {!conflictSession && !canStart && !isLoading && (
-          <div className="bg-gray-100 rounded-xl p-4 text-center text-gray-600 text-sm mb-4">
+          <div className="bg-gray-100 rounded-xl p-5 text-center text-gray-700 text-base font-semibold mb-4">
             {summary?.sessions_used === summary?.sessions_allowed
               ? '✅ You have used all your sessions for today. Come back tomorrow!'
               : '⏰ Daily time limit reached. Come back tomorrow!'}
@@ -304,21 +328,21 @@ export function SessionStartPage() {
         )}
 
         {!conflictSession && canStart && summary && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-800">
-            <p className="font-semibold text-center mb-2">
+          <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-4 text-base text-teal-800">
+            <p className="font-bold text-center mb-2">
               Starting Session {summary.sessions_used + 1} of {summary.sessions_allowed}
             </p>
             <div className="flex justify-between py-1">
-              <span>Completed today</span>
-              <span className="font-medium">{summary.sessions_used} session{summary.sessions_used !== 1 ? 's' : ''}</span>
+              <span className="font-semibold">Completed today</span>
+              <span className="font-semibold">{summary.sessions_used} session{summary.sessions_used !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex justify-between py-1">
-              <span>Remaining after this</span>
-              <span className="font-medium">{summary.sessions_allowed - summary.sessions_used - 1} session{(summary.sessions_allowed - summary.sessions_used - 1) !== 1 ? 's' : ''}</span>
+              <span className="font-semibold">Remaining after this</span>
+              <span className="font-semibold">{summary.sessions_allowed - summary.sessions_used - 1} session{(summary.sessions_allowed - summary.sessions_used - 1) !== 1 ? 's' : ''}</span>
             </div>
-            <div className="flex justify-between py-1 border-t border-blue-200 mt-1">
-              <span>Daily time remaining</span>
-              <span className="font-medium font-mono">{formatSeconds(dailyRemaining ?? 0)}</span>
+            <div className="flex justify-between py-1 border-t border-teal-200 mt-1">
+              <span className="font-semibold">Daily time remaining</span>
+              <span className="font-semibold font-mono">{formatSeconds(dailyRemaining ?? 0)}</span>
             </div>
           </div>
         )}
@@ -326,7 +350,7 @@ export function SessionStartPage() {
         {!conflictSession && (
           <button onClick={handleStart}
             disabled={!canStart || isStarting || !deviceId}
-            className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-base">
+            className="w-full bg-teal-600 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-base">
             {isStarting ? 'Starting session…' : 'Start Session'}
           </button>
         )}

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  Alert, ActivityIndicator, StyleSheet, Platform, Modal,
+  ActivityIndicator, StyleSheet, Platform, Modal, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import ViewShot from 'react-native-view-shot'
@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext'
 import { logout } from '../../api/auth'
 import { takeScreenshot } from '../../hooks/useScreenshot'
 import { formatSeconds } from '../../lib/utils'
+import { AppAlert, AlertConfig } from '../../components/ui/AppAlert'
 import type { FieldConfig } from '../../types/data'
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
@@ -57,6 +58,8 @@ export default function DataEntryScreen() {
   const router = useRouter()
   const qc = useQueryClient()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [alertCfg, setAlertCfg] = useState<AlertConfig | null>(null)
+  const showAlert = (cfg: AlertConfig) => setAlertCfg(cfg)
   const { user, clearAuth } = useAuth()
   const { activeSession, remainingSeconds } = useSession()
   const viewShotRef = useRef<any>(null)
@@ -90,7 +93,7 @@ export default function DataEntryScreen() {
       setTimeout(() => qc.invalidateQueries({ queryKey: ['next-record'] }), 600)
     },
     onError: (err: any) =>
-      Alert.alert('Submit failed', err.response?.data?.error ?? 'Please try again.'),
+      showAlert({ title: 'Submit failed', message: err.response?.data?.error ?? 'Please try again.', buttons: [{ text: 'OK' }] }),
   })
 
   const inputFields     = data?.field_config.filter(f => !f.is_reference) ?? []
@@ -124,15 +127,15 @@ export default function DataEntryScreen() {
 
   const handleSubmit = () => {
     if (!activeSession) { router.replace('/(app)'); return }
-    if (!validate()) { Alert.alert('Validation', 'Please fill all required fields.'); return }
-    Alert.alert(
-      'Submit Record',
-      'Are you sure you want to submit this record and move to the next?',
-      [
+    if (!validate()) { showAlert({ title: 'Validation', message: 'Please fill all required fields.', buttons: [{ text: 'OK' }] }); return }
+    showAlert({
+      title: 'Submit Record',
+      message: 'Are you sure you want to submit this record and move to the next?',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Submit', onPress: () => submitMut.mutate() },
-      ]
-    )
+      ],
+    })
   }
 
   const handleScreenshot = async () => {
@@ -172,7 +175,7 @@ export default function DataEntryScreen() {
     )
   }
 
-  if (isLoading) return <View style={s.center}><ActivityIndicator size="large" color="#2563eb" /></View>
+  if (isLoading) return <View style={s.center}><ActivityIndicator size="large" color="#0d9488" /></View>
 
   if (isError || !data) {
     return (
@@ -191,25 +194,40 @@ export default function DataEntryScreen() {
 
       {/* ── Brand strip ── */}
       <View style={s.brandBar}>
+        <Image source={require('../../assets/logo.png')} style={{ width: 18, height: 18, borderRadius: 4 }} />
         <Text style={s.brandText}>MMT Associate Software</Text>
       </View>
 
       {/* ── Top bar ── */}
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => router.replace('/(app)')} style={s.backBtn}>
-          <Text style={s.backText}>🏠 Home</Text>
+        {/* Left: avatar + name + record — taps to go home */}
+        <TouchableOpacity
+          onPress={() => router.replace('/(app)')}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+          activeOpacity={0.7}
+        >
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#0d9488', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{user?.name?.charAt(0).toUpperCase() ?? '?'}</Text>
+          </View>
+          <View>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#111827' }}>{user?.name}</Text>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#0d9488', fontFamily: 'monospace' }}>{data?.record.record_code ?? '—'}</Text>
+            <Text style={{ fontSize: 10, fontWeight: '600', color: '#0d9488', marginTop: 2, opacity: 0.75 }}>← Home</Text>
+          </View>
         </TouchableOpacity>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={[{ fontSize: 13, fontWeight: '600' }, { color: timerColor }]}>
-            ⏱ {formatSeconds(remainingSeconds)}
-          </Text>
-          <Text style={{ fontSize: 10, color: '#9ca3af' }}>
-            {user?.name}  ·  {data?.record.record_code ?? '—'}
-          </Text>
+
+        {/* Right: timer stack + menu */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: timerColor, fontVariant: ['tabular-nums'] }}>
+              {formatSeconds(remainingSeconds)}
+            </Text>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#0d9488', marginTop: 1 }}>remaining</Text>
+          </View>
+          <TouchableOpacity onPress={() => setMenuOpen(v => !v)} style={s.menuBtn}>
+            <Text style={s.menuText}>⋮</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => setMenuOpen(v => !v)} style={s.menuBtn}>
-          <Text style={s.menuText}>⋮</Text>
-        </TouchableOpacity>
       </View>
 
       {/* ── Stats Bottom Sheet ── */}
@@ -222,11 +240,11 @@ export default function DataEntryScreen() {
           <View style={s.sheetSessionHeader}>
             <View style={{ flex: 1 }}>
               <Text style={s.sheetLabel}>Session {activeSession?.session_number ?? '—'} of 2  ·  {user?.name}</Text>
-              <Text style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', marginTop: 2 }}>{data?.record.record_code ?? '—'}</Text>
+              <Text style={{ fontSize: 11, color: '#111827', fontWeight: '600', fontFamily: 'monospace', marginTop: 2 }}>{data?.record.record_code ?? '—'}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[s.sheetTimer, { color: timerColor }]}>{formatSeconds(remainingSeconds)}</Text>
-              <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>remaining</Text>
+              <Text style={{ fontSize: 10, color: '#0d9488', fontWeight: '700', marginTop: 1 }}>remaining</Text>
             </View>
           </View>
 
@@ -240,22 +258,22 @@ export default function DataEntryScreen() {
                 <View style={s.sheetSection}>
                   <Text style={s.sheetSectionTitle}>Project Details</Text>
                   <SheetRow label="Project No"   value="MMT_PRO001" />
-                  <SheetRow label="Test Session" value={tp ? `Test ${tp.period}` : '—'} valueColor="#0284c7" />
+                  <SheetRow label="Test Session" value={tp ? `Test ${tp.period}` : '—'} />
                   <SheetRow label="Day"          value={tp ? `${tp.dayOfPeriod} / 40` : '—'} />
                   <SheetRow label="Start Date"   value={fmtDate(tp ? tp.pStart : user?.approved_at)} />
                   <SheetRow label="End Date"     value={fmtDate(tp ? tp.pEnd : addDays(user?.approved_at, 39))} />
                   <SheetRow label="Days Left"    value={tp ? String(tp.daysRemaining) : '—'} last />
                   <View style={{ flexDirection: 'row', marginTop: 8, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0' }}>
                     {[
-                      { label: 'Total',   val: '2500',          color: '#374151' },
-                      { label: 'Minimum', val: '2500',          color: '#374151' },
+                      { label: 'Total',   val: '2500',          color: '#000000' },
+                      { label: 'Minimum', val: '2500',          color: '#000000' },
                       { label: 'Finish',  val: String(completed), color: '#16a34a' },
-                      { label: 'Balance', val: String(balance),  color: '#2563eb' },
+                      { label: 'Balance', val: String(balance),  color: '#0d9488' },
                     ].map((col, i, arr) => (
                       <View key={col.label} style={{ flex: 1, alignItems: 'center', paddingVertical: 8,
                         borderRightWidth: i < arr.length - 1 ? 1 : 0, borderRightColor: '#e2e8f0' }}>
-                        <Text style={{ fontSize: 10, color: '#9ca3af', marginBottom: 3 }}>{col.label}</Text>
-                        <Text style={{ fontSize: 13, fontWeight: 'bold', color: col.color }}>{col.val}</Text>
+                        <Text style={{ fontSize: 13, color: '#000000', fontWeight: '800', marginBottom: 3 }}>{col.label}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: col.color }}>{col.val}</Text>
                       </View>
                     ))}
                   </View>
@@ -269,7 +287,7 @@ export default function DataEntryScreen() {
               const vd = user?.credential_valid_until
               const daysLeft = vd ? Math.floor((new Date(vd).getTime() - Date.now()) / 86400000) : null
               const validityColor = daysLeft === null ? '#6b7280'
-                : daysLeft < 0 ? '#dc2626' : daysLeft <= 30 ? '#ef4444' : daysLeft <= 90 ? '#2563eb' : '#16a34a'
+                : daysLeft < 0 ? '#dc2626' : daysLeft <= 30 ? '#ef4444' : daysLeft <= 90 ? '#0d9488' : '#16a34a'
               const validityLabel = daysLeft === null ? '—'
                 : daysLeft < 0 ? 'Expired' : `${daysLeft}d left`
               return (
@@ -291,14 +309,18 @@ export default function DataEntryScreen() {
           {/* ── Logout ── */}
           <TouchableOpacity style={s.logoutBtn} onPress={() => {
             setMenuOpen(false)
-            Alert.alert('Logout', 'Are you sure you want to logout?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Logout', style: 'destructive', onPress: async () => {
-                try { await logout() } catch {}
-                await clearAuth()
-                router.replace('/(auth)/login')
-              }},
-            ])
+            showAlert({
+              title: 'Logout',
+              message: 'Are you sure you want to logout?',
+              buttons: [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Logout', style: 'destructive', onPress: async () => {
+                  try { await logout() } catch {}
+                  await clearAuth()
+                  router.replace('/(auth)/login')
+                }},
+              ],
+            })
           }}>
             <Text style={s.logoutText}>🚪  Logout</Text>
           </TouchableOpacity>
@@ -332,7 +354,7 @@ export default function DataEntryScreen() {
       </View>
       <ViewShot ref={viewShotRef} style={{ flex: 1 }}>
         <ScrollView
-          style={{ flex: 1, backgroundColor: '#fff' }}
+          style={{ flex: 1, backgroundColor: '#f0fdfa' }}
           contentContainerStyle={s.inputList}
           keyboardShouldPersistTaps="handled"
         >
@@ -380,13 +402,34 @@ export default function DataEntryScreen() {
       {/* ── Hidden full-page print view (off-screen, captured for screenshot) ── */}
       <View ref={printRef} style={s.printView} collapsable={false}>
         {/* Header */}
-        <View style={{ backgroundColor: '#1e293b', padding: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>DataEntry Pro</Text>
-          <Text style={{ color: '#94a3b8', fontSize: 12 }}>{data?.record.record_code}</Text>
+        <View style={{ backgroundColor: '#0f766e', padding: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>MMT Associate Software</Text>
+          <Text style={{ color: '#99f6e4', fontSize: 12 }}>{data?.record.record_code}</Text>
+        </View>
+        {/* Form Upload Details */}
+        <View style={{ backgroundColor: '#f0fdfa', borderBottomWidth: 1, borderBottomColor: '#99f6e4', padding: 12 }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#0f766e', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Form Upload Details</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+            {[
+              { label: 'Mem ID',       val: user?.display_id ?? '—' },
+              { label: 'Pro No',       val: 'MMT_PRO001' },
+              { label: 'App No',       val: referenceFields[0] ? ((data?.record.values as Record<string, string>)[referenceFields[0].column_key] ?? '—') : '—' },
+              { label: 'U Date',       val: new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) },
+            ].map(item => (
+              <View key={item.label} style={{ width: '48%', marginBottom: 6 }}>
+                <Text style={{ fontSize: 9, color: '#0f766e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>{item.label}</Text>
+                <Text style={{ fontSize: 12, color: '#111827', fontWeight: '600' }}>{item.val}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#ccfbf1' }}>
+            <Text style={{ fontSize: 9, color: '#0f766e', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Submitted By</Text>
+            <Text style={{ fontSize: 12, color: '#111827', fontWeight: '600' }}>{user?.name ?? '—'}</Text>
+          </View>
         </View>
         {/* Column headers */}
-        <View style={{ flexDirection: 'row', backgroundColor: '#1e3a5f' }}>
-          <View style={{ flex: 1, padding: 8, borderRightWidth: 1, borderRightColor: '#2d5a8e' }}>
+        <View style={{ flexDirection: 'row', backgroundColor: '#0d9488' }}>
+          <View style={{ flex: 1, padding: 8, borderRightWidth: 1, borderRightColor: '#0f766e' }}>
             <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>Reference Data</Text>
           </View>
           <View style={{ flex: 1, padding: 8 }}>
@@ -399,26 +442,27 @@ export default function DataEntryScreen() {
           const refVal   = refField ? (data?.record.values as Record<string, string>)[refField.column_key] : ''
           const entered  = inputs[inputField.column_key] ?? ''
           return (
-            <View key={inputField.id} style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', backgroundColor: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
-              <View style={{ flex: 1, padding: 8, borderRightWidth: 1, borderRightColor: '#bfdbfe', backgroundColor: idx % 2 === 0 ? '#eff6ff' : '#dbeafe' }}>
-                <Text style={{ fontSize: 9, color: '#3b82f6', fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 }}>{refField?.label ?? ''}</Text>
+            <View key={inputField.id} style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#ccfbf1', backgroundColor: idx % 2 === 0 ? '#fff' : '#f0fdfa' }}>
+              <View style={{ flex: 1, padding: 8, borderRightWidth: 1, borderRightColor: '#99f6e4', backgroundColor: idx % 2 === 0 ? '#f0fdfa' : '#ccfbf1' }}>
+                <Text style={{ fontSize: 9, color: '#0f766e', fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 }}>{refField?.label ?? ''}</Text>
                 <Text style={{ fontSize: 12, color: '#111827', fontWeight: '600' }}>{refVal || '—'}</Text>
               </View>
               <View style={{ flex: 1, padding: 8 }}>
-                <Text style={{ fontSize: 9, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 }}>{inputField.label}</Text>
+                <Text style={{ fontSize: 9, color: '#0d9488', fontWeight: '700', textTransform: 'uppercase', marginBottom: 2 }}>{inputField.label}</Text>
                 <Text style={{ fontSize: 12, color: entered ? '#111827' : '#9ca3af' }}>{entered || '(not entered)'}</Text>
               </View>
             </View>
           )
         })}
         {/* Watermark */}
-        <View style={{ backgroundColor: '#1e293b', padding: 10 }}>
+        <View style={{ backgroundColor: '#134e4a', padding: 10 }}>
           <Text style={{ color: '#fff', fontSize: 11 }}>
             {user?.name}  |  {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}  |  Record #{data?.record.global_sequence}
           </Text>
         </View>
       </View>
 
+      <AppAlert visible={!!alertCfg} config={alertCfg} onClose={() => setAlertCfg(null)} />
     </SafeAreaView>
   )
 }
@@ -437,9 +481,9 @@ function SheetRow({ label, value, valueColor, last }: {
 }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9,
-      borderBottomWidth: last ? 0 : 1, borderBottomColor: '#f1f5f9' }}>
-      <Text style={{ fontSize: 13, color: '#6b7280' }}>{label}</Text>
-      <Text style={{ fontSize: 13, fontWeight: '600', color: valueColor ?? '#111827' }}>{value}</Text>
+      borderBottomWidth: last ? 0 : 1, borderBottomColor: '#ccfbf1' }}>
+      <Text style={{ fontSize: 15, color: '#374151', fontWeight: '700' }}>{label}</Text>
+      <Text style={{ fontSize: 15, fontWeight: '700', color: valueColor ?? '#111827' }}>{value}</Text>
     </View>
   )
 }
@@ -459,7 +503,7 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
 
       {field.field_type === 'fixed' ? (
         <TextInput
-          style={[s.textInput, { backgroundColor: '#f3f4f6', color: '#6b7280' }]}
+          style={[s.textInput, { backgroundColor: '#f0fdfa', color: '#374151' }]}
           value={value} editable={false}
         />
       ) : field.field_type === 'dropdown' ? (
@@ -507,49 +551,47 @@ function FieldInput({ field, value, error, showDatePicker, onShowDatePicker, onC
 }
 
 const s = StyleSheet.create({
-  safeArea:         { flex: 1, backgroundColor: '#f9fafb', position: 'relative' },
-  brandBar:         { backgroundColor: '#1e293b', paddingVertical: 5, alignItems: 'center' },
-  brandText:        { color: '#94a3b8', fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  safeArea:         { flex: 1, backgroundColor: '#f0fdfa', position: 'relative' },
+  brandBar:         { backgroundColor: '#0f766e', paddingVertical: 5, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  brandText:        { color: '#ccfbf1', fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyText:        { color: '#6b7280', fontSize: 16, marginBottom: 16, textAlign: 'center' },
-  topBar:           { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backBtn:          { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  backText:         { color: '#2563eb', fontSize: 14, fontWeight: '600' },
-  menuBtn:          { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
-  menuText:         { fontSize: 20, color: '#374151', fontWeight: 'bold', lineHeight: 22 },
+  topBar:           { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  menuBtn:          { width: 36, height: 36, borderRadius: 18, backgroundColor: '#ccfbf1', alignItems: 'center', justifyContent: 'center' },
+  menuText:         { fontSize: 20, color: '#0f766e', fontWeight: 'bold', lineHeight: 22 },
   sheetOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet:            { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
-  sheetHandle:      { width: 40, height: 4, backgroundColor: '#d1d5db', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  sheetHandle:      { width: 40, height: 4, backgroundColor: '#99f6e4', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   sheetTitle:       { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12 },
-  sheetSessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 12 },
-  sheetSection:     { backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 10 },
-  sheetSectionTitle: { fontSize: 11, fontWeight: '700', color: '#0369a1', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
-  sheetCard:        { backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginBottom: 10 },
-  sheetLabel:       { fontSize: 10, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  sheetValue:       { fontSize: 15, fontWeight: '600', color: '#111827' },
+  sheetSessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f0fdfa', borderRadius: 12, borderWidth: 1, borderColor: '#99f6e4', padding: 14, marginBottom: 12 },
+  sheetSection:     { backgroundColor: '#f0fdfa', borderRadius: 12, borderWidth: 1, borderColor: '#99f6e4', padding: 12, marginBottom: 10 },
+  sheetSectionTitle: { fontSize: 16, fontWeight: '800', color: '#000000', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+  sheetCard:        { backgroundColor: '#f0fdfa', borderRadius: 12, padding: 12, marginBottom: 10 },
+  sheetLabel:       { fontSize: 12, fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  sheetValue:       { fontSize: 16, fontWeight: '700', color: '#111827' },
   sheetTimer:       { fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] },
   logoutBtn:        { backgroundColor: '#fef2f2', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 4 },
   logoutText:       { color: '#dc2626', fontWeight: '700', fontSize: 15 },
 
   // Reference panel
-  refContainer:     { backgroundColor: '#f8faff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', maxHeight: 200 },
-  refHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#1e293b' },
-  refTitle:         { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
-  refChevron:       { fontSize: 11, color: '#d1d5db' },
+  refContainer:     { backgroundColor: '#f0fdfa', borderBottomWidth: 1, borderBottomColor: '#99f6e4', maxHeight: 200 },
+  refHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#0d9488' },
+  refTitle:         { fontSize: 13, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
+  refChevron:       { fontSize: 11, color: '#ccfbf1' },
   refScroll:        { maxHeight: 150 },
   refGrid:          { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
   refItem:          { width: '50%', paddingHorizontal: 8, paddingVertical: 6 },
-  refLabel:         { fontSize: 10, fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 },
-  refValue:         { fontSize: 13, fontWeight: '600', color: '#0f172a' },
+  refLabel:         { fontSize: 9, fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 },
+  refValue:         { fontSize: 9, fontWeight: '700', color: '#111827' },
 
   // Input section
-  inputList:        { padding: 14, paddingBottom: 20 },
-  groupHeader:      { backgroundColor: '#dbeafe', paddingHorizontal: 14, paddingVertical: 8, marginTop: 8, borderRadius: 6, alignItems: 'center' },
-  groupHeaderText:  { color: '#1d4ed8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  enterDataHeader:  { backgroundColor: '#1e293b', paddingHorizontal: 16, paddingVertical: 8 },
+  inputList:        { padding: 8, paddingBottom: 16 },
+  groupHeader:      { backgroundColor: '#ccfbf1', paddingHorizontal: 14, paddingVertical: 8, marginTop: 8, borderRadius: 6, alignItems: 'center' },
+  groupHeaderText:  { color: '#0f766e', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  enterDataHeader:  { backgroundColor: '#0d9488', paddingHorizontal: 16, paddingVertical: 8 },
   enterDataLabel:   { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
   fieldWrap:        { marginBottom: 14 },
-  inputLabel:       { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 6 },
+  inputLabel:       { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 6 },
   textInput:        { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14, backgroundColor: '#fff' },
   pickerWrapper:    { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, backgroundColor: '#fff' },
   inputError:       { borderColor: '#f87171', backgroundColor: '#fef2f2' },
@@ -558,8 +600,8 @@ const s = StyleSheet.create({
   // Bottom bar
   bottomBar:        { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e5e7eb', padding: 12, flexDirection: 'row', gap: 10 },
   printView:        { position: 'absolute', top: 10000, left: 0, width: 390, backgroundColor: '#fff' },
-  btn:              { backgroundColor: '#2563eb', borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
-  btnText:          { color: '#fff', fontWeight: '600', fontSize: 14 },
+  btn:              { backgroundColor: '#0d9488', borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
+  btnText:          { color: '#fff', fontWeight: '700', fontSize: 14 },
   btnSecondary:     { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 16, alignItems: 'center' },
-  btnSecondaryText: { color: '#374151', fontWeight: '500', fontSize: 16 },
+  btnSecondaryText: { color: '#374151', fontWeight: '600', fontSize: 16 },
 })

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  Alert, ActivityIndicator, StyleSheet,
+  Alert, ActivityIndicator, StyleSheet, Image,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { login } from '../../api/auth'
@@ -49,7 +49,6 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       const deviceId   = await getDeviceId()
-      const deviceName = getDeviceName()
       // Store the token first so API client can use it
       await storage.setToken(conflict.token)
       await storage.setDeviceId(deviceId)
@@ -85,20 +84,17 @@ export default function LoginScreen() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#eff6ff' }} contentContainerStyle={s.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#f0fdfa' }} contentContainerStyle={s.container}>
       <View style={{ alignItems: 'center', marginBottom: 28 }}>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: '#1d4ed8', letterSpacing: 0.5 }}>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f766e', letterSpacing: 0.5 }}>
           MMT Associate Software
-        </Text>
-        <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
-          Data Entry Platform
         </Text>
       </View>
       <View style={s.card}>
         {/* Logo */}
-        <View style={s.logo}><Text style={s.logoText}>M</Text></View>
-        <Text style={s.title}>Welcome back</Text>
-        <Text style={s.subtitle}>Sign in to continue</Text>
+        <Image source={require('../../assets/logo.png')} style={s.logo} />
+        <Text style={s.title}>Welcome back to{'\n'}MMT Associate Software</Text>
+        <Text style={s.subtitle}>Please login to continue</Text>
 
         <Text style={s.label}>Mobile Number</Text>
         <TextInput
@@ -124,8 +120,8 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.push('/(auth)/signup')} style={{ marginTop: 12 }}>
-          <Text style={{ textAlign: 'center', color: '#6b7280' }}>
-            Don't have an account? <Text style={{ color: '#2563eb', fontWeight: '600' }}>Sign up</Text>
+          <Text style={{ textAlign: 'center', color: '#374151', fontWeight: '600' }}>
+            Don't have an account? <Text style={{ color: '#0d9488', fontWeight: '700' }}>Sign up</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -136,15 +132,15 @@ export default function LoginScreen() {
 const s = StyleSheet.create({
   container:    { flexGrow: 1, justifyContent: 'center', padding: 24 },
   card:         { backgroundColor: '#fff', borderRadius: 20, padding: 28, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
-  logo:         { width: 56, height: 56, borderRadius: 14, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12 },
+  logo:         { width: 72, height: 72, borderRadius: 16, alignSelf: 'center', marginBottom: 12 },
   logoText:     { color: '#fff', fontWeight: 'bold', fontSize: 20 },
   title:        { fontSize: 22, fontWeight: 'bold', color: '#111827', textAlign: 'center', marginBottom: 4 },
-  subtitle:     { fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 24 },
-  label:        { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 6 },
-  input:        { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, marginBottom: 14, backgroundColor: '#fff' },
-  btn:          { backgroundColor: '#2563eb', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  btnText:      { color: '#fff', fontWeight: '600', fontSize: 15 },
+  subtitle:     { fontSize: 14, color: '#111827', textAlign: 'center', marginBottom: 24, fontWeight: '700' },
+  label:        { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 6 },
+  input:        { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontWeight: '600', marginBottom: 14, backgroundColor: '#fff' },
+  btn:          { backgroundColor: '#0d9488', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  btnText:      { color: '#fff', fontWeight: '700', fontSize: 15 },
   btnOutline:   { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
-  btnOutlineText: { color: '#374151', fontWeight: '500', fontSize: 15 },
+  btnOutlineText: { color: '#374151', fontWeight: '600', fontSize: 15 },
   infoBox:      { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16 },
 })

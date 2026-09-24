@@ -199,11 +199,11 @@ export function ReceiptModal({ user, onClose }: Props) {
             {/* Tab switch */}
             <div className="flex gap-2">
               <button onClick={() => setTab('member')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab === 'member' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}>
+                className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab === 'member' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 border'}`}>
                 Member Receipt
               </button>
               <button onClick={() => setTab('cash')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab === 'cash' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}>
+                className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab === 'cash' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 border'}`}>
                 Cash Receipt
               </button>
             </div>
@@ -361,7 +361,7 @@ export function ReceiptModal({ user, onClose }: Props) {
             Cancel
           </button>
           <button onClick={handleDownload} disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+            className="px-6 py-2 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 disabled:opacity-50">
             {loading ? 'Generating PDF…' : '⬇ Download PDF'}
           </button>
         </div>

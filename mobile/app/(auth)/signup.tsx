@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StyleSheet, StatusBar, Platform } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StyleSheet, StatusBar, Platform, Image } from 'react-native'
 import { useRouter } from 'expo-router'
 import { signup } from '../../api/auth'
 import { EyeIcon } from '../../components/ui/EyeIcon'
@@ -24,6 +24,8 @@ export default function SignupScreen() {
     if (!password)                e.password = 'Password is required.'
     else if (password.length < 6) e.password = 'Minimum 6 characters.'
     if (password !== confirmPassword) e.confirm_password = 'Passwords do not match.'
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      e.email = 'Enter a valid email address.'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -45,12 +47,12 @@ export default function SignupScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: '#eff6ff' }}
+      style={{ flex: 1, backgroundColor: '#f0fdfa' }}
       contentContainerStyle={[s.container, { paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 16 : 40 }]}
       keyboardShouldPersistTaps="handled"
     >
       <View style={s.card}>
-        <View style={s.logo}><Text style={s.logoText}>DE</Text></View>
+        <Image source={require('../../assets/logo.png')} style={s.logo} />
         <Text style={s.title}>Create account</Text>
 
         {/* Full Name */}
@@ -111,6 +113,7 @@ export default function SignupScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
         />
+        {errors.email ? <Text style={s.errorText}>{errors.email}</Text> : null}
 
         <TouchableOpacity style={[s.btn, { marginTop: 20 }]} onPress={handleSignup} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Create Account</Text>}
@@ -129,20 +132,20 @@ export default function SignupScreen() {
 const s = StyleSheet.create({
   container:   { padding: 20, paddingBottom: 40 },
   card:        { backgroundColor: '#fff', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
-  logo:        { width: 56, height: 56, borderRadius: 14, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12 },
+  logo:        { width: 56, height: 56, borderRadius: 14, alignSelf: 'center', marginBottom: 12 },
   logoText:    { color: '#fff', fontWeight: 'bold', fontSize: 20 },
   title:       { fontSize: 22, fontWeight: 'bold', color: '#111827', textAlign: 'center', marginBottom: 20 },
-  label:       { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 6, marginTop: 4 },
+  label:       { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 6, marginTop: 4 },
   required:    { color: '#ef4444' },
   optional:    { color: '#9ca3af', fontWeight: '400' },
-  input:       { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, backgroundColor: '#fff', marginBottom: 2 },
+  input:       { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontWeight: '600', backgroundColor: '#fff', marginBottom: 2 },
   inputError:  { borderColor: '#f87171', backgroundColor: '#fef2f2' },
   errorText:   { color: '#ef4444', fontSize: 12, marginBottom: 4 },
   pwRow:       { position: 'relative' },
   pwInput:     { paddingRight: 48 },
   eyeBtn:      { position: 'absolute', right: 12, top: 10 },
-  btn:         { backgroundColor: '#2563eb', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  btnText:     { color: '#fff', fontWeight: '600', fontSize: 15 },
-  link:        { textAlign: 'center', color: '#6b7280', fontSize: 14 },
-  linkBold:    { color: '#2563eb', fontWeight: '600' },
+  btn:         { backgroundColor: '#0d9488', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  btnText:     { color: '#fff', fontWeight: '700', fontSize: 15 },
+  link:        { textAlign: 'center', color: '#374151', fontSize: 14, fontWeight: '600' },
+  linkBold:    { color: '#0d9488', fontWeight: '700' },
 })

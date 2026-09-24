@@ -122,6 +122,7 @@ func main() {
 	admin.GET("/batches", adminHandler.ListBatches)
 	admin.DELETE("/batches/:id", adminHandler.DeleteBatch)
 	admin.GET("/records", adminHandler.ListRecords)
+	admin.GET("/records/:id", dataHandler.GetRecord)
 	admin.PATCH("/records/:id/enable", adminHandler.EnableRecord)
 	admin.PATCH("/records/:id/disable", adminHandler.DisableRecord)
 	admin.DELETE("/records/:id", adminHandler.DeleteRecord)

@@ -9,6 +9,7 @@ export function AdminsPage() {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', mobile: '', password: '', email: '' })
   const [formError, setFormError] = useState('')
+  const [disableTarget, setDisableTarget] = useState<User | null>(null)
 
   const { data: admins, isLoading } = useQuery({
     queryKey: ['admin-admins'],
@@ -47,31 +48,31 @@ export function AdminsPage() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Admins</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Admins</h1>
         <button onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors">
+          className="bg-teal-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-teal-700 transition-colors">
           + Create Admin
         </button>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-8">
-          <div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-teal-700">
               <tr>
                 {['ID', 'Name', 'Mobile', 'Email', 'Created', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wide">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {(admins ?? []).map((a: User) => (
                 <tr key={a.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs text-blue-600">{a.display_id || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-teal-600">{a.display_id || '—'}</td>
                   <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
                   <td className="px-4 py-3 text-gray-600">{a.mobile}</td>
                   <td className="px-4 py-3 text-gray-500">{a.email ?? '—'}</td>
@@ -83,7 +84,7 @@ export function AdminsPage() {
                   </td>
                   <td className="px-4 py-3 flex gap-2">
                     {a.status === 'active' && (
-                      <button onClick={() => { if (confirm('Disable this admin?')) disableMut.mutate(a.id) }}
+                      <button onClick={() => setDisableTarget(a)}
                         className="px-2.5 py-1 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200">Disable</button>
                     )}
                     {a.status === 'disabled' && (
@@ -108,27 +109,27 @@ export function AdminsPage() {
             <h2 className="text-lg font-bold text-gray-900 mb-4">Create Admin</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Name *</label>
+                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Name *</label>
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   placeholder="Full name" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mobile *</label>
+                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Mobile *</label>
                 <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   placeholder="Mobile number" type="tel" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Password *</label>
+                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Password *</label>
                 <input value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   placeholder="Min 6 characters" type="password" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email (optional)</label>
+                <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Email (optional)</label>
                 <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                   placeholder="email@example.com" type="email" />
               </div>
               {formError && <p className="text-red-600 text-sm">{formError}</p>}
@@ -138,11 +139,31 @@ export function AdminsPage() {
                   Cancel
                 </button>
                 <button type="submit" disabled={createMut.isPending}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50">
+                  className="flex-1 bg-teal-600 text-white py-2 rounded-xl font-medium hover:bg-teal-700 disabled:opacity-50">
                   {createMut.isPending ? 'Creating…' : 'Create Admin'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Disable confirm dialog */}
+      {disableTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-xs w-full text-center">
+            <p className="text-gray-800 font-semibold mb-1">Disable this admin?</p>
+            <p className="text-sm text-gray-500 mb-5">{disableTarget.name} will lose admin access.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDisableTarget(null)}
+                className="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={() => { disableMut.mutate(disableTarget.id); setDisableTarget(null) }}
+                className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-red-700 transition-colors">
+                Disable
+              </button>
+            </div>
           </div>
         </div>
       )}

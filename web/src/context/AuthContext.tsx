@@ -14,25 +14,25 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
-  const [isLoading, setIsLoading] = useState(!!localStorage.getItem('token'))
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('token'))
+  const [isLoading, setIsLoading] = useState(!!sessionStorage.getItem('token'))
 
   useEffect(() => {
     if (!token) { setIsLoading(false); return }
     getMe()
       .then((res) => setUser(res.data.data))
-      .catch(() => { localStorage.removeItem('token'); setToken(null) })
+      .catch(() => { sessionStorage.removeItem('token'); setToken(null) })
       .finally(() => setIsLoading(false))
   }, [token])
 
   const setAuth = (newToken: string, newUser: User) => {
-    localStorage.setItem('token', newToken)
+    sessionStorage.setItem('token', newToken)
     setToken(newToken)
     setUser(newUser)
   }
 
   const clearAuth = () => {
-    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
     setToken(null)
     setUser(null)
   }

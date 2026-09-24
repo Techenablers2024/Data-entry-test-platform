@@ -72,7 +72,7 @@ export function UserReportPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <button onClick={() => navigate('/admin/users')}
-          className="text-blue-600 hover:underline text-sm flex items-center gap-1">
+          className="text-teal-600 hover:underline text-sm flex items-center gap-1">
           ← Users
         </button>
         <span className="text-gray-400">/</span>
@@ -122,7 +122,7 @@ export function UserReportPage() {
 
       {(isLoading || selectedPeriod === null) && (
         <div className="flex justify-center py-12">
-          <div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -182,7 +182,7 @@ export function UserReportPage() {
                   className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                    <span className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs">
                       #{sub.sequence_number}
                     </span>
                     <span className="text-sm text-gray-500">{sub.submitted_at}</span>
@@ -246,7 +246,7 @@ export function UserReportPage() {
                   return (
                     <button key={p} onClick={() => { setPage(p); setExpandedSub(null) }}
                       className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                        p === report.page ? 'bg-blue-600 text-white' : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
+                        p === report.page ? 'bg-teal-600 text-white' : 'border border-gray-300 hover:bg-gray-50 text-gray-700'
                       }`}>
                       {p}
                     </button>
