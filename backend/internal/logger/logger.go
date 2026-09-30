@@ -3,8 +3,10 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -42,8 +44,19 @@ func Init(dir string) {
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "logger: failed to create log dir: %v\n", err)
 	}
+	// Redirect Go's standard log package into our structured log files
+	log.SetOutput(stdLogWriter{})
+	log.SetFlags(0)
 	// Start background cleanup
 	go runCleanup()
+}
+
+// stdLogWriter routes log.* calls into our structured logger file
+type stdLogWriter struct{}
+
+func (stdLogWriter) Write(p []byte) (int, error) {
+	Write(Entry{Level: LevelError, Event: "system", Message: strings.TrimSpace(string(p))})
+	return len(p), nil
 }
 
 func Write(e Entry) {

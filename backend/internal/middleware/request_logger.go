@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strings"
 	"time"
 
 	"dataentry-platform/backend/internal/logger"
@@ -11,6 +12,14 @@ import (
 
 func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		// Skip high-volume no-diagnostic-value endpoints
+		if strings.HasSuffix(path, "/heartbeat") ||
+			path == "/logs" || path == "/logs/ui" || path == "/logs/stats" ||
+			path == "/health" {
+			c.Next()
+			return
+		}
 		start := time.Now()
 		c.Next()
 		latency := time.Since(start)

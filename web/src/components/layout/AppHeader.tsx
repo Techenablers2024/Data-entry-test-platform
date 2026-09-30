@@ -1,3 +1,4 @@
+import logoUrl from '../../assets/logo.png'
 import { useSession } from '../../context/SessionContext'
 import { useAuth } from '../../context/AuthContext'
 import { logout, updateMyBank } from '../../api/auth'
@@ -149,7 +150,7 @@ export function AppHeader() {
       <header className="bg-white border-b border-gray-200 px-4 min-h-16 h-auto py-2 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         {/* Left: Logo + Brand */}
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="MMT" className="w-14 h-14 rounded-xl object-cover shrink-0" />
+          <img src={logoUrl} alt="MMT" className="w-14 h-14 rounded-xl object-cover shrink-0" />
           <div className="hidden sm:flex items-center">
             <span className="font-bold text-xl lg:text-3xl leading-none text-gray-700 whitespace-nowrap">MMT Associate Software</span>
           </div>
@@ -262,6 +263,58 @@ export function AppHeader() {
                 {/* Content */}
                 <div className="flex-1 p-3 bg-gray-100 overflow-y-auto">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <PolicyItem number={1}
+                      kannada="ವಯಸ್ಸಿನ ಮಿತಿಯು 18 ಅಥವಾ ಹೆಚ್ಚಿನದಾಗಿರಬೇಕು. ಈ ಉದ್ಯೋಗವನ್ನು ಮಾಡಲು ಕಡ್ಡಾಯವಾಗಿ 18 ವಯಸ್ಸು ತುಂಬಿರಬೇಕು. ನೋಂದಣ್ಣಿಯ ಸಂದರ್ಭದಲ್ಲಿ ವಯೋಮಿತಿಯನ್ನು ದೃಢಪಡಿಸಲು ಯಾವುದಾದರೂ ಒಂದು ದಾಖಲಾತಿಯನ್ನು ಸಂಸ್ಥೆಗೆ ಸಲ್ಲಿಸಬೇಕು."
+                      english="The age limit must be 18 or more. You must be 18 years of age to do this job and submit a document to the organization to confirm the age limit at the time of registration."
+                    />
+                    <PolicyItem number={2}
+                      kannada="ನೋಂದಣಿ ಉಚಿತವಾಗಿರುತ್ತದೆ. ಈ ಸಂಸ್ಥೆಯಲ್ಲಿ ಕೆಲಸ ಪಡೆಯಲು ಯಾವುದೇ ರೀತಿಯ ನೋಂದಣಿ ಶುಲ್ಕ ಇರುವುದಿಲ್ಲ. ಆದರೆ ಉದ್ಯೋಗ ಮಾಡಲು ಬೇಕಾದ ಸಾಫ್ಟ್‌ವೇರ್ ಅಥವಾ ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ನೊಂದಾಯಿತ ವ್ಯಕ್ತಿಯು ಕೆ.ಎಸ್.ಸಲ್ಯೂಷನ್ ಕಂಪನಿಯಿಂದ ಖರೀದಿಸಬೇಕಾಗುತ್ತದೆ. ಈ ಸಾಫ್ಟ್‌ವೇರ್ ಕೇವಲ ಒಂದು ವರ್ಷಕ್ಕೆ ಸೀಮಿತವಾಗಿದ್ದು ಕೇವಲ ನೋಂದಣಿ ಸಂಖ್ಯೆಗೆ ಮಾತ್ರ ಅನ್ವಯಿಸುತ್ತದೆ."
+                      english="Registration is free. There is no registration fee to get a job in this organisation. But the required software or application needs to be purchased from K.S. Solutions online or offline. The software is valid for one year only and applies only to the registered member ID."
+                    />
+                    <PolicyItem number={3}
+                      kannada="ನೋಂದಣಿಯು ಒಂದು ವರ್ಷಕ್ಕೆ ಸೀಮಿತವಾಗಿರುತ್ತದೆ. ನೋಂದಣಿಯಾದ ವ್ಯಕ್ತಿಗೆ ಸಂಸ್ಥೆಯು ಒಂದು ವರ್ಷಗಳ ಕಾಲ ಉದ್ಯೋಗವನ್ನು ನೀಡುತ್ತದೆ."
+                      english="Registration is valid for one year. The organisation offers jobs to the registered person for a period of one year only."
+                    />
+                    <PolicyItem number={4}
+                      kannada="ಸಾಫ್ಟ್‌ವೇರ್ ಅಥವಾ ಅಪ್ಲಿಕೇಶನ್ ಖರೀದಿಗಾಗಿ ಕೆ.ಎಸ್.ಸಲ್ಯೂಷನ್ ಕಂಪನಿಗೆ ಪಾವತಿಸಿರುವ ಹಣವನ್ನು ಯಾವುದೇ ಕಾರಣಕ್ಕೂ ಮರುಪಾವತಿ ಮಾಡಲಾಗುವುದಿಲ್ಲ."
+                      english="The money paid to K.S. Solutions for the purchase of software or application is not refundable for any reason."
+                    />
+                    <PolicyItem number={5}
+                      kannada="ಪರಿಶೀಲನೆ ಅಥವಾ ಸಲ್ಲಿಕೆಗಾಗಿ ನೀವು 2500 ಫಾರ್ಮ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಬೇಕು. ಸಂಸ್ಥೆಯಿಂದ ಪಡೆದ 2500 ಫಾರ್ಮ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದಲ್ಲಿ ಮಾತ್ರ ಪರಿಶೀಲನೆಗೆ ಒಳಪಡುತ್ತದೆ. 2500 ಕ್ಕಿಂತ ಕಡಿಮೆ ಫಾರ್ಮ್ ಭರ್ತಿ ಮಾಡಿದಲ್ಲಿ ಅದು ಪರಿಶೀಲನೆಗೆ ಮಾನ್ಯವಾಗುವುದಿಲ್ಲ."
+                      english="For verification you must complete all 2500 forms. Only after completing all 2500 forms will it be eligible for verification. Less than 2500 forms will not be valid for verification."
+                    />
+                    <PolicyItem number={6}
+                      kannada="ಪೂರ್ಣಗೊಂಡ ಫಾರ್ಮ್‌ನಲ್ಲಿ ಒಂದೇ ಒಂದು ತಪ್ಪನ್ನು ಹೊಂದಿದರೆ ಅದನ್ನು ಪರಿಗಣಿಸಲಾಗುವುದಿಲ್ಲ ಮತ್ತು ಆ ಫಾರ್ಮ್ ಅನ್ನು ತಿರಸ್ಕರಿಸಲಾಗುತ್ತದೆ."
+                      english="If the completed form contains even a single mistake, it will not be counted and that form will be rejected."
+                    />
+                    <PolicyItem number={7}
+                      kannada="ಪಾವತಿಯು ಸರಿಯಾದ ಫಾರ್ಮ್‌ಗಳು ಮತ್ತು ದೋಷಮಟ್ಟವನ್ನು ಅವಲಂಬಿಸಿದೆ, ಒಟ್ಟು ಅಪ್‌ಲೋಡ್ ಮಾಡಿದ ಫಾರ್ಮ್‌ಗಳ ಮೇಲೆ ಅಲ್ಲ."
+                      english="Payment depends on correct forms and error level, not on total uploaded forms."
+                    />
+                    <PolicyItem number={8}
+                      kannada="ಫಾರ್ಮ್‌ಗಳನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ಮತ್ತು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ನಮ್ಮ ಸಾಫ್ಟ್‌ವೇರ್ ಅಥವಾ ಅಪ್ಲಿಕೇಶನ್‌ಗೆ 15 ರಿಂದ 60 ಸೆಕೆಂಡುಗಳ ಅಗತ್ಯವಿದೆ."
+                      english="Our application requires 15 to 60 seconds to download and upload forms."
+                    />
+                    <PolicyItem number={9}
+                      kannada="2500 ಫಾರ್ಮ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಲು ಅನುಮತಿಸಲಾದ ಕನಿಷ್ಠ 15 ದಿನಗಳು ಹಾಗೂ ಗರಿಷ್ಠ ಸಮಯದ ಮಿತಿ 40 ದಿನಗಳು. 40ನೇ ದಿನದ ಮಧ್ಯರಾತ್ರಿ ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್ ವರ್ಕ್ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅಂತ್ಯಗೊಳ್ಳುತ್ತದೆ."
+                      english="The minimum time to complete 2500 forms is 15 days and the maximum is 40 days. Your project work will automatically end at midnight on the 40th day."
+                    />
+                    <PolicyItem number={10}
+                      kannada="ಪ್ರತಿ ದಿನ ಕೆಲಸ ಮಾಡಲು 8 ಗಂಟೆಗಳ ಕಾಲ ಮಾತ್ರ ಅವಕಾಶವಿರುತ್ತದೆ. ಈ 8 ಗಂಟೆಯನ್ನು ಎರಡು ಶಿಫ್ಟ್‌ಗಳಾಗಿ (4hrs + 4hrs) ವಿಂಗಡಿಸಲಾಗಿದೆ. ಒಮ್ಮೆ ಶಿಫ್ಟ್ ಶುರು ಮಾಡಿದ ನಂತರ ನೀವು ನಿರಂತರವಾಗಿ 4 ಗಂಟೆಗಳ ಕಾಲ ಕೆಲಸ ಮಾಡಬೇಕು. 4 ಗಂಟೆಗಳ ನಂತರ ನಿಮ್ಮ ಶಿಫ್ಟ್ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ. ಪ್ರತಿದಿನ ಎರಡು ಶಿಫ್ಟ್‌ಗಳನ್ನು ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಮಾಡಬಹುದು."
+                      english="Only 8 hours are allowed to work every day, divided into two shifts (4hrs + 4hrs). Once a shift starts you must work continuously for 4 hours. Your shift will automatically end after 4 hours. You can do two shifts daily at any time."
+                    />
+                    <PolicyItem number={11}
+                      kannada="ಮೊದಲಿನ 500 ಫಾರ್ಮ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ ನಂತರ ರಿಪೋರ್ಟ್ ನಿಮಗೆ ನೀಡಲಾಗುವುದು, ಇದರಿಂದ ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್ ನಿಖರತೆಯನ್ನು ತಿಳಿಯಲು ಸಹಾಯವಾಗುತ್ತದೆ. ಈ ರಿಪೋರ್ಟ್‌ನಲ್ಲಿ ತಪ್ಪುಗಳು ಹೆಚ್ಚಾಗಿ ಕಂಡು ಬಂದಲ್ಲಿ ನೀವು ಪ್ರಸ್ತುತ ಪ್ರಾಜೆಕ್ಟ್ ಅನ್ನು ಕೊನೆಗೊಳಿಸಿ ಹೊಸ ಪ್ರಾಜೆಕ್ಟ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಬಹುದು."
+                      english="After completing the first 500 forms, a report will be given to help you know your project accuracy. If there are too many errors, you can end the current project and start a new one."
+                    />
+                    <PolicyItem number={12}
+                      kannada="ಕಂಪನಿಯು ಪಾರದರ್ಶಕತೆಯನ್ನು ಹೊಂದಿರುವುದರಿಂದ ನೀವು ಮಾಡುವ ಪ್ರಾಜೆಕ್ಟ್ ಅನ್ನು ನಿಮ್ಮ ಕಂಪ್ಯೂಟರ್ ಅಥವಾ ಮೊಬೈಲ್ ಮೂಲಕ ಸ್ಕ್ರೀನ್ ರೆಕಾರ್ಡಿಂಗ್ ಮಾಡಿಕೊಳ್ಳಬಹುದು."
+                      english="Since the company maintains transparency, you can screen record the project you are doing through your computer or mobile using the software or application."
+                    />
+                    <PolicyItem number={13}
+                      kannada="ಸಾಫ್ಟ್‌ವೇರ್ ಮತ್ತು ಅಪ್ಲಿಕೇಶನ್ ಕೇವಲ ಒಂದು ಕಂಪ್ಯೂಟರ್ ಅಥವಾ ಒಂದು ಮೊಬೈಲ್‌ಗೆ ಮಾತ್ರ ಸೀಮಿತವಾಗಿರುತ್ತದೆ. ಒಂದೇ ಡಿವೈಸ್ ಅನ್ನು ಬಳಸಿ ಎಷ್ಟು ಜನ ಬೇಕಾದರೂ ಉದ್ಯೋಗವನ್ನು ಮಾಡಬಹುದು."
+                      english="Software or application is limited to only one computer or one mobile. Using a single device, multiple users can work."
+                    />
                     <PolicyItem number={14}
                       kannada="ಪರಿಶೀಲನೆಗಿ ನಮಗೆ 2 ದಿನಗಳ ಅಗತ್ಯವಿದೆ. ಪರಿಶೀಲನೆಯ ನಂತರ ಪೇಮೆಂಟ್ ಗಾಗಿ ನಮಗೆ 1 ವಾರದ ಕಾಲವಕಾಶ ಬೇಕಾಗುತದೆ."
                       english="For verification we require 2 days. After verification, we require 1 week for payment processing."
@@ -359,7 +412,7 @@ export function AppHeader() {
 
                       {/* Logo box */}
                       <div className="border border-teal-400 rounded overflow-hidden shadow-sm bg-white flex justify-center items-center py-5">
-                        <img src="/logo.png" alt="MMT" className="w-20 h-20 rounded-xl object-cover shadow" />
+                        <img src={logoUrl} alt="MMT" className="w-20 h-20 rounded-xl object-cover shadow" />
                       </div>
 
                       {/* Registration Details box */}

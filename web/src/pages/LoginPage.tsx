@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
+import logoUrl from '../assets/logo.png'
 import { useAuth } from '../context/AuthContext'
 import { useDeviceFingerprint } from '../hooks/useDeviceFingerprint'
 import { EyeIcon } from '../components/ui/EyeIcon'
@@ -64,7 +65,7 @@ export function LoginPage() {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 sm:p-8">
         {/* Brand */}
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="MMT Logo" className="w-20 h-20 rounded-2xl object-cover mx-auto mb-3 shadow-md" />
+          <img src={logoUrl} alt="MMT Logo" className="w-20 h-20 rounded-2xl object-cover mx-auto mb-3 shadow-md" />
           <h1 className="text-2xl font-black text-gray-800">MMT Associate Software</h1>
           <p className="text-teal-600 font-bold text-sm mt-1">Sign in to continue</p>
         </div>

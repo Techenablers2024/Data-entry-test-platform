@@ -24,7 +24,13 @@ apiClient.interceptors.response.use(
     const isLoginCall = err.config?.url?.includes('/auth/login')
     if (err.response?.status === 401 && !isLoginCall) {
       sessionStorage.removeItem('token')
-      window.location.href = '/login'
+      // window.location.href = '/login' navigates to file:///login on Electron (file:// protocol) → blank screen
+      // Use hash for file:// (Electron production), plain path for http (dev/browser)
+      if (window.location.protocol === 'file:') {
+        window.location.hash = '#/login'
+      } else {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }

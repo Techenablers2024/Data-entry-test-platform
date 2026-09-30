@@ -31,7 +31,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Load active session on mount / user change
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setActiveSessionState(null)  // clear heartbeat when user logs out
+      return
+    }
     getActiveSession()
       .then((r) => setActiveSessionState(r.data.data))
       .catch(() => setActiveSessionState(null))

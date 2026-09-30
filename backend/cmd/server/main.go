@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -52,7 +53,10 @@ func main() {
 
 	// Router
 	r := gin.New()
-	r.Use(gin.Recovery())
+	r.Use(gin.CustomRecovery(func(c *gin.Context, err any) {
+		logger.Error("panic", fmt.Sprintf("%v", err), "")
+		c.AbortWithStatus(500)
+	}))
 	r.Use(middleware.RequestLogger())
 
 	// CORS — allow all origins in dev (Electron uses file://, Vite uses localhost)
@@ -140,6 +144,7 @@ func main() {
 	// Logs viewer (key-protected)
 	r.GET("/logs", logsHandler.ViewLogs)
 	r.GET("/logs/ui", logsHandler.ViewLogsUI)
+	r.GET("/logs/stats", logsHandler.ViewLogsStats)
 
 	log.Printf("Server starting on :%s\n", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

@@ -18,6 +18,7 @@ export function DataEntryPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [screenshotMsg, setScreenshotMsg] = useState('')
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['next-record'],
@@ -98,7 +99,11 @@ export function DataEntryPage() {
       document.querySelector('[data-field-error]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if (!window.confirm('Are you sure you want to submit this record and move to the next?')) return
+    setShowConfirm(true)
+  }
+
+  const handleConfirmSubmit = () => {
+    setShowConfirm(false)
     submitMutation.mutate()
   }
 
@@ -319,8 +324,8 @@ export function DataEntryPage() {
                   {group.fields.map((f) => (
                     <div key={f.column_key} className="px-3 py-0.5 bg-white text-[13px] leading-snug">
                       <span className="text-black font-bold">{f.label}</span>
-                      <span className="text-black font-extrabold mx-1">:</span>
-                      <span className="text-black font-semibold">{values[f.column_key] || '—'}</span>
+                      <span className="text-black font-bold mx-1">:</span>
+                      <span className="text-black font-bold">{values[f.column_key] || '—'}</span>
                     </div>
                   ))}
                 </div>
@@ -406,6 +411,28 @@ export function DataEntryPage() {
         </div>{/* end enter data box */}
 
       </div>
+
+      {/* ── In-app submit confirmation (replaces window.confirm to avoid Electron focus loss on Windows) ── */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-80 p-6 flex flex-col gap-4">
+            <h3 className="text-base font-bold text-gray-900">Submit Record?</h3>
+            <p className="text-sm text-gray-600">Are you sure you want to submit this record and move to the next?</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50">
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700">
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
+import logoUrl from '../../assets/logo.png'
 import { useAuth } from '../../context/AuthContext'
 import { logout } from '../../api/auth'
 
@@ -26,7 +27,7 @@ export function AdminLayout() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-teal-800 px-6 h-16 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="MMT" className="w-10 h-10 rounded-xl object-cover shadow-md ring-2 ring-white/20" />
+          <img src={logoUrl} alt="MMT" className="w-10 h-10 rounded-xl object-cover shadow-md ring-2 ring-white/20" />
           <div className="flex flex-col leading-tight">
             <span className="font-bold text-white text-base whitespace-nowrap">MMT Associate Software</span>
             <span className="text-teal-300 text-xs font-semibold tracking-wide">Admin Panel</span>
