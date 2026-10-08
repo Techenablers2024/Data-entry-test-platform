@@ -378,7 +378,7 @@ export default function SessionGateScreen() {
 
             <View style={s.infoBox}>
               <Text style={{ color: '#0f766e', fontSize: 13 }}>
-                ℹ️  To update profile details, contact your admin.
+                ℹ️  Name and mobile number cannot be changed. If there is any mistake in other details, please contact your admin if required.
               </Text>
             </View>
           </ScrollView>

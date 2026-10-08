@@ -336,13 +336,26 @@ export default function DataEntryScreen() {
 
         {refExpanded && (
           <ScrollView style={s.refScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-            <View style={s.refGrid}>
-              {referenceFields.map(f => (
-                <View key={f.id} style={s.refItem}>
-                  <Text style={s.refLabel}>{f.label}</Text>
-                  <Text style={s.refValue}>{refValues[f.column_key] || '—'}</Text>
-                </View>
-              ))}
+            <View style={s.refList}>
+              {referenceFields.map((f, idx) => {
+                const showGroup = f.group && (idx === 0 || f.group !== referenceFields[idx - 1].group)
+                return (
+                  <View key={f.id}>
+                    {showGroup && (
+                      <View style={s.refGroupHeader}>
+                        <Text style={s.refGroupHeaderText}>{f.group}</Text>
+                      </View>
+                    )}
+                    <View style={s.refRow}>
+                      <Text style={s.refRowText}>
+                        <Text style={s.refRowLabel}>{f.label}</Text>
+                        <Text style={s.refRowColon}> : </Text>
+                        <Text style={s.refRowValue}>{refValues[f.column_key] || '—'}</Text>
+                      </Text>
+                    </View>
+                  </View>
+                )
+              })}
             </View>
           </ScrollView>
         )}
@@ -574,19 +587,23 @@ const s = StyleSheet.create({
   logoutText:       { color: '#dc2626', fontWeight: '700', fontSize: 15 },
 
   // Reference panel
-  refContainer:     { backgroundColor: '#f0fdfa', borderBottomWidth: 1, borderBottomColor: '#99f6e4', maxHeight: 200 },
-  refHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#0d9488' },
-  refTitle:         { fontSize: 13, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
-  refChevron:       { fontSize: 11, color: '#ccfbf1' },
-  refScroll:        { maxHeight: 150 },
-  refGrid:          { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
-  refItem:          { width: '50%', paddingHorizontal: 8, paddingVertical: 6 },
-  refLabel:         { fontSize: 9, fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 },
-  refValue:         { fontSize: 9, fontWeight: '700', color: '#111827' },
+  refContainer:        { backgroundColor: '#f0fdfa', borderBottomWidth: 1, borderBottomColor: '#99f6e4', maxHeight: 220 },
+  refHeader:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#0d9488' },
+  refTitle:            { fontSize: 13, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
+  refChevron:          { fontSize: 11, color: '#ccfbf1' },
+  refScroll:           { maxHeight: 170 },
+  refList:             { paddingVertical: 4 },
+  refGroupHeader:      { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 1 },
+  refGroupHeaderText:  { color: '#0f766e', fontSize: 11, fontWeight: '800' },
+  refRow:              { paddingHorizontal: 12, paddingVertical: 3 },
+  refRowText:          { fontSize: 12, lineHeight: 18 },
+  refRowLabel:         { fontWeight: '700', color: '#111827' },
+  refRowColon:         { fontWeight: '700', color: '#111827' },
+  refRowValue:         { fontWeight: '700', color: '#111827' },
 
   // Input section
   inputList:        { padding: 8, paddingBottom: 16 },
-  groupHeader:      { backgroundColor: '#ccfbf1', paddingHorizontal: 14, paddingVertical: 8, marginTop: 8, borderRadius: 6, alignItems: 'center' },
+  groupHeader:      { backgroundColor: '#ccfbf1', paddingHorizontal: 14, paddingVertical: 8, marginTop: 8, borderRadius: 6 },
   groupHeaderText:  { color: '#0f766e', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   enterDataHeader:  { backgroundColor: '#0d9488', paddingHorizontal: 16, paddingVertical: 8 },
   enterDataLabel:   { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
