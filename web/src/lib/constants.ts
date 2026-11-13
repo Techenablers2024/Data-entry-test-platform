@@ -1,4 +1,4 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://34.93.86.205:8080/api/v1'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://35.234.210.37:8080/api/v1'
 export const MAX_SESSION_SECONDS = 4 * 60 * 60   // 4 hours
 export const MAX_DAILY_SECONDS   = 8 * 60 * 60   // 8 hours
 export const HEARTBEAT_INTERVAL  = 15_000         // 15 seconds
